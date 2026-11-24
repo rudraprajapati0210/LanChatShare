@@ -18,6 +18,11 @@ class AndroidIdentityTest {
         val reopened = identityKeys()
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         val certificate = store.getCertificate(IDENTITY_ALIAS)
+        val base64 = java.util.Base64.getEncoder()
+        val der = base64.encodeToString(certificate.encoded)
+        val fingerprint = base64.encodeToString(digest(certificate.encoded))
+        checkCertificate(der, fingerprint, first.public)
+        assertThrows(IllegalArgumentException::class.java) { checkCertificate(der, "changed", first.public) }
         assertArrayEquals(first.public.encoded, certificate.publicKey.encoded)
         assertArrayEquals(reopened.public.encoded, first.public.encoded)
         assertNull(first.private.encoded)
@@ -57,5 +62,21 @@ class AndroidIdentityTest {
         assertArrayEquals(token, outbound.first)
         assertEquals(routes, outbound.second)
         assertNull(store.takeOutgoing("outgoing"))
+    }
+
+    @Test fun upgradePreservesPreviouslyVerifiedKey() = runBlocking {
+        val file = "upgrade-" + UUID.randomUUID() + ".db"
+        try {
+            context.openOrCreateDatabase(file, 0, null).use { db ->
+                db.execSQL("CREATE TABLE trusted_peers (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, colour INTEGER NOT NULL, pin TEXT NOT NULL)")
+                db.execSQL("INSERT INTO trusted_peers VALUES ('device', 'Mira', 2, 'saved-key')")
+                db.version = 1
+            }
+            val upgraded = Room.databaseBuilder(context, TrustDatabase::class.java, file).build()
+            try {
+                assertEquals(TrustedPeer("device", "Mira", 2, "saved-key"), upgraded.peers().observe().first().single())
+            } finally { upgraded.close() }
+        } finally { context.deleteDatabase(file) }
+        Unit
     }
 }

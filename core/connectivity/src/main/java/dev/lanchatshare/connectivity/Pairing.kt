@@ -21,7 +21,8 @@ private fun fresh() = ByteArray(32).also(random::nextBytes)
 
 @Serializable
 internal data class Hello(val version: Int, val id: String, val name: String, val colour: Int, val key: String, val nonce: String,
-    val endpoints: List<WifiEndpoint> = emptyList(), val spkiSha256: String? = null)
+    val endpoints: List<WifiEndpoint> = emptyList(), val spkiSha256: String? = null,
+    val certificate: String? = null, val certificateSha256: String? = null)
 
 internal class Frames(input: InputStream, output: OutputStream) {
     private val reader = DataInputStream(input)
@@ -43,6 +44,15 @@ internal class Frames(input: InputStream, output: OutputStream) {
 internal data class Verified(val peer: TrustedPeer, val token: ByteArray, val endpoints: List<WifiEndpoint>)
 internal data class Comparison(val name: String, val id: String, val digits: String, val changed: Boolean)
 
+internal fun checkCertificate(encoded: String?, fingerprint: String?, key: PublicKey) {
+    if (encoded == null) { require(fingerprint == null); return }
+    val der = decoder.decode(encoded)
+    require(encoder.encodeToString(digest(der)) == fingerprint)
+    val certificate = java.security.cert.CertificateFactory.getInstance("X.509")
+        .generateCertificate(der.inputStream())
+    require(MessageDigest.isEqual(certificate.publicKey.encoded, key.encoded))
+}
+
 private fun signed(key: PrivateKey, bytes: ByteArray) = Signature.getInstance("SHA256withECDSA").run {
     initSign(key); update(bytes); sign()
 }
@@ -54,12 +64,14 @@ private fun verify(key: PublicKey, bytes: ByteArray, signature: ByteArray) {
 // Commit before reveal so neither endpoint can adapt its nonce to the other's hello.
 internal suspend fun pair(
     frames: Frames, initiator: Boolean, profile: Profile, keys: KeyPair,
-    lookupPin: suspend (String) -> String?, endpoints: List<WifiEndpoint> = emptyList(), confirm: suspend (Comparison) -> Boolean
+    lookupPin: suspend (String) -> String?, endpoints: List<WifiEndpoint> = emptyList(), certificate: ByteArray? = null,
+    confirm: suspend (Comparison) -> Boolean
 ): Verified {
     val role = if (initiator) 0.toByte() else 1.toByte()
     val otherRole = (1 - role).toByte()
     val mine = Hello(1, profile.id, profile.name, profile.colour, encoder.encodeToString(keys.public.encoded), encoder.encodeToString(fresh()),
-        endpoints, encoder.encodeToString(digest(keys.public.encoded)))
+        endpoints, encoder.encodeToString(digest(keys.public.encoded)), certificate?.let(encoder::encodeToString),
+        certificate?.let { encoder.encodeToString(digest(it)) })
     val local = json.encodeToString(mine).encodeToByteArray()
     val commitment = frames.exchange(digest(byteArrayOf(role) + local))
     val remote = frames.exchange(local)
@@ -70,6 +82,7 @@ internal suspend fun pair(
     val publicKey = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(decoder.decode(hello.key)))
     val pin = encoder.encodeToString(digest(publicKey.encoded))
     require(hello.spkiSha256 == null || hello.spkiSha256 == pin)
+    checkCertificate(hello.certificate, hello.certificateSha256, publicKey)
     require(hello.endpoints.size <= 8)
     hello.endpoints.forEach { it.address() }
     val transcript = digest("LanChatShare pairing v1".encodeToByteArray() +
@@ -88,6 +101,6 @@ internal suspend fun pair(
     verify(publicKey, approval + otherRole, frames.exchange(signed(keys.private, approval + role)))
     val token = if (initiator) fresh().also(frames::send) else frames.receive()
     require(token.size == 32)
-    return Verified(TrustedPeer(hello.id, hello.name, hello.colour, pin), token, hello.endpoints)
+    return Verified(TrustedPeer(hello.id, hello.name, hello.colour, pin, hello.certificateSha256), token, hello.endpoints)
 }
 

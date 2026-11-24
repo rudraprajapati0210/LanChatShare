@@ -18,3 +18,4 @@ The two-phone acceptance checklist lives in README.md. Physical radio testing re
 Signed v1 hellos now include the calculated certificate public-key fingerprint and optional Wi-Fi route hints. IPv4/IPv6 hints and the one-use token are retained together in memory. No shared Wi-Fi is required for pairing.
 The comparison prompt and socket now share one pairing deadline. Nearby rechecks permissions after session state changes and catches permission loss during scanning and Bluetooth enable requests.
 Protocol tests now check rejected signing keys, malformed address and port hints, IPv4 handoff, and one-use token direction. Seven protocol JVM tests passed.
+Both peers now exchange the self-signed certificate and its SHA-256 fingerprint inside the signed hello. Verification checks that the certificate contains the key that signed the transcript. Room schema v2 preserves existing SPKI pins.

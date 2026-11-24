@@ -27,7 +27,7 @@ class PairingTest {
                 runCatching {
                     pair(Frames(it.getInputStream(), it.getOutputStream()), initiator,
                         if (initiator) a else b, if (initiator) aKey else responderKeys,
-                        { if (initiator) pinA else pinB }, listOf(WifiEndpoint("wKgBBQ==", LAN_PORT)), { if (initiator) approveA(it) else approveB(it) })
+                        { if (initiator) pinA else pinB }, listOf(WifiEndpoint("wKgBBQ==", LAN_PORT)), confirm = { if (initiator) approveA(it) else approveB(it) })
                 }
             }
             val receiver = async(Dispatchers.IO) { run(server.accept(), false) }
@@ -82,7 +82,7 @@ class PairingTest {
         Frames(InputStream.nullInputStream(), wire).apply { send(ByteArray(32)); send("altered".encodeToByteArray()) }
         var asked = false
         val result = runCatching { pair(Frames(wire.toByteArray().inputStream(), ByteArrayOutputStream()), true,
-            a, aKey, { null }, emptyList(), { asked = true; true }) }
+            a, aKey, { null }, emptyList(), confirm = { asked = true; true }) }
         assertTrue(result.isFailure)
         assertFalse(asked)
     }
@@ -103,4 +103,5 @@ class PairingTest {
         assertEquals("🌼🌼", bytes.copyOfRange(4, bytes.size).decodeToString(throwOnInvalidSequence = true))
     }
 }
+
 

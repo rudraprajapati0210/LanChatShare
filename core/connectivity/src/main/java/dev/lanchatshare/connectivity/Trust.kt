@@ -10,7 +10,8 @@ import java.security.spec.ECGenParameterSpec
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "trusted_peers")
-data class TrustedPeer(@PrimaryKey val id: String, val name: String, val colour: Int, val pin: String)
+data class TrustedPeer(@PrimaryKey val id: String, val name: String, val colour: Int, val pin: String,
+    val certificateSha256: String? = null)
 @Dao internal interface PeerDao {
     @Query("SELECT * FROM trusted_peers ORDER BY name COLLATE NOCASE, id")
     fun observe(): Flow<List<TrustedPeer>>
@@ -18,7 +19,7 @@ data class TrustedPeer(@PrimaryKey val id: String, val name: String, val colour:
     suspend fun pin(id: String): String?
     @Upsert suspend fun save(peer: TrustedPeer)
 }
-@Database(entities = [TrustedPeer::class], version = 1)
+@Database(entities = [TrustedPeer::class], version = 2, autoMigrations = [AutoMigration(from = 1, to = 2)])
 internal abstract class TrustDatabase : RoomDatabase() {
     abstract fun peers(): PeerDao
 }
@@ -49,6 +50,10 @@ class TrustStore(context: Context) {
     }
 }
 internal const val IDENTITY_ALIAS = "lanchatshare.identity.v1"
+internal fun identityCertificate(): ByteArray = KeyStore.getInstance("AndroidKeyStore").run {
+    load(null)
+    getCertificate(IDENTITY_ALIAS).encoded
+}
 @Synchronized internal fun identityKeys(): KeyPair {
     val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
     (store.getEntry(IDENTITY_ALIAS, null) as? KeyStore.PrivateKeyEntry)?.let {

@@ -131,7 +131,7 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
             try {
                 if (initiator) socket.connect()
                 val verified = pair(Frames(socket.inputStream, socket.outputStream), initiator, profile,
-                    identityKeys(), trust.dao::pin, wifiEndpoints(context)) { match ->
+                    identityKeys(), trust.dao::pin, wifiEndpoints(context), identityCertificate()) { match ->
                     val wait = CompletableDeferred<Boolean>()
                     synchronized(guard) {
                         if (closed || active !== socket || SystemClock.elapsedRealtime() >= deadline) return@pair false
