@@ -20,7 +20,8 @@ internal fun digest(bytes: ByteArray): ByteArray = MessageDigest.getInstance("SH
 private fun fresh() = ByteArray(32).also(random::nextBytes)
 
 @Serializable
-internal data class Hello(val version: Int, val id: String, val name: String, val colour: Int, val key: String, val nonce: String)
+internal data class Hello(val version: Int, val id: String, val name: String, val colour: Int, val key: String, val nonce: String,
+    val endpoints: List<WifiEndpoint> = emptyList(), val spkiSha256: String? = null)
 
 internal class Frames(input: InputStream, output: OutputStream) {
     private val reader = DataInputStream(input)
@@ -39,7 +40,7 @@ internal class Frames(input: InputStream, output: OutputStream) {
     fun exchange(bytes: ByteArray): ByteArray { send(bytes); return receive() }
 }
 
-internal data class Verified(val peer: TrustedPeer, val token: ByteArray)
+internal data class Verified(val peer: TrustedPeer, val token: ByteArray, val endpoints: List<WifiEndpoint>)
 internal data class Comparison(val name: String, val id: String, val digits: String, val changed: Boolean)
 
 private fun signed(key: PrivateKey, bytes: ByteArray) = Signature.getInstance("SHA256withECDSA").run {
@@ -53,11 +54,12 @@ private fun verify(key: PublicKey, bytes: ByteArray, signature: ByteArray) {
 // Commit before reveal so neither endpoint can adapt its nonce to the other's hello.
 internal suspend fun pair(
     frames: Frames, initiator: Boolean, profile: Profile, keys: KeyPair,
-    lookupPin: suspend (String) -> String?, confirm: suspend (Comparison) -> Boolean
+    lookupPin: suspend (String) -> String?, endpoints: List<WifiEndpoint> = emptyList(), confirm: suspend (Comparison) -> Boolean
 ): Verified {
     val role = if (initiator) 0.toByte() else 1.toByte()
     val otherRole = (1 - role).toByte()
-    val mine = Hello(1, profile.id, profile.name, profile.colour, encoder.encodeToString(keys.public.encoded), encoder.encodeToString(fresh()))
+    val mine = Hello(1, profile.id, profile.name, profile.colour, encoder.encodeToString(keys.public.encoded), encoder.encodeToString(fresh()),
+        endpoints, encoder.encodeToString(digest(keys.public.encoded)))
     val local = json.encodeToString(mine).encodeToByteArray()
     val commitment = frames.exchange(digest(byteArrayOf(role) + local))
     val remote = frames.exchange(local)
@@ -67,6 +69,9 @@ internal suspend fun pair(
     require(validatedName(hello.name) == hello.name && hello.colour in 0..3 && decoder.decode(hello.nonce).size == 32)
     val publicKey = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(decoder.decode(hello.key)))
     val pin = encoder.encodeToString(digest(publicKey.encoded))
+    require(hello.spkiSha256 == null || hello.spkiSha256 == pin)
+    require(hello.endpoints.size <= 8)
+    hello.endpoints.forEach { it.address() }
     val transcript = digest("LanChatShare pairing v1".encodeToByteArray() +
         if (initiator) digest(local) + digest(remote) else digest(remote) + digest(local))
     val signature = frames.exchange(signed(keys.private, transcript + role))
@@ -83,5 +88,6 @@ internal suspend fun pair(
     verify(publicKey, approval + otherRole, frames.exchange(signed(keys.private, approval + role)))
     val token = if (initiator) fresh().also(frames::send) else frames.receive()
     require(token.size == 32)
-    return Verified(TrustedPeer(hello.id, hello.name, hello.colour, pin), token)
+    return Verified(TrustedPeer(hello.id, hello.name, hello.colour, pin), token, hello.endpoints)
 }
+

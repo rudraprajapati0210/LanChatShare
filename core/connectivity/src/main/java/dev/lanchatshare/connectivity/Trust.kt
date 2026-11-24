@@ -26,15 +26,23 @@ class TrustStore(context: Context) {
     private val database = Room.databaseBuilder(context.applicationContext, TrustDatabase::class.java, "peers.db").build()
     internal val dao = database.peers()
     val peers = dao.observe()
-    private data class Ticket(val bytes: ByteArray, val until: Long)
+    private data class Ticket(val bytes: ByteArray, val until: Long, val routes: List<WifiEndpoint>, val outgoing: Boolean)
     private val tickets = mutableMapOf<String, Ticket>()
-    @Synchronized internal fun issue(id: String, bytes: ByteArray) {
+    @Synchronized internal fun issue(id: String, bytes: ByteArray, routes: List<WifiEndpoint> = emptyList(), outgoing: Boolean = false) {
         tickets.entries.removeAll { it.value.until <= SystemClock.elapsedRealtime() }
-        tickets[id] = Ticket(bytes.copyOf(), SystemClock.elapsedRealtime() + 120_000)
+        tickets[id] = Ticket(bytes.copyOf(), SystemClock.elapsedRealtime() + 120_000, routes.toList(), outgoing)
+    }
+    @Synchronized internal fun takeOutgoing(id: String): Pair<ByteArray, List<WifiEndpoint>>? {
+        val ticket = tickets[id] ?: return null
+        if (!ticket.outgoing) return null
+        tickets.remove(id)
+        if (ticket.until <= SystemClock.elapsedRealtime()) return null
+        return ticket.bytes to ticket.routes
     }
     @Synchronized fun consume(id: String, presented: ByteArray): Boolean {
         val ticket = tickets[id] ?: return false
         if (ticket.until <= SystemClock.elapsedRealtime()) { tickets.remove(id); return false }
+        if (ticket.outgoing) return false
         if (!MessageDigest.isEqual(ticket.bytes, presented)) return false
         tickets.remove(id)
         return true
@@ -53,3 +61,4 @@ internal const val IDENTITY_ALIAS = "lanchatshare.identity.v1"
         initialize(spec); generateKeyPair()
     }
 }
+

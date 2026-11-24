@@ -122,7 +122,7 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
             try {
                 if (initiator) socket.connect()
                 val verified = pair(Frames(socket.inputStream, socket.outputStream), initiator, profile,
-                    identityKeys(), trust.dao::pin) { match ->
+                    identityKeys(), trust.dao::pin, wifiEndpoints(context)) { match ->
                     val wait = CompletableDeferred<Boolean>()
                     synchronized(guard) {
                         if (closed || active !== socket) return@pair false
@@ -133,8 +133,10 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
                 }
                 ensureActive()
                 trust.dao.save(verified.peer)
-                trust.issue(verified.peer.id, verified.token)
-                mutable.update { it.copy(status = "Verified " + verified.peer.name + ".") }
+                trust.issue(verified.peer.id, verified.token, verified.endpoints, initiator)
+                val address = verified.endpoints.firstOrNull()?.display()
+                val route = address?.let { " Wi-Fi endpoint: $it." }.orEmpty()
+                mutable.update { it.copy(status = "Verified " + verified.peer.name + "." + route) }
             } catch (e: Exception) {
                 if (isActive) mutable.update { it.copy(status = "Pairing ended. Check both phones and try again.") }
             } finally {
@@ -165,3 +167,4 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
         }
     }
 }
+

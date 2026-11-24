@@ -15,3 +15,4 @@ The workspace had no Git metadata. Commit `f59d371` preserves the existing sourc
 | G · Hardening, polish and tests | Partly done. StrictMode, lint and scoped tests exist. |
 
 The two-phone acceptance checklist lives in README.md. Physical radio testing requires two Android devices.
+Signed v1 hellos now include the calculated certificate public-key fingerprint and optional Wi-Fi route hints. IPv4/IPv6 hints and the one-use token are retained together in memory. No shared Wi-Fi is required for pairing.
