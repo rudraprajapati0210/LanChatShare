@@ -32,12 +32,23 @@ import dev.lanchatshare.data.Profile
     var foreground by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
     var refresh by remember { mutableIntStateOf(0) }
     DisposableEffect(lifecycle) {
+        val bluetoothEvents = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context, intent: Intent) {
+                if (intent.action == BluetoothAdapter.ACTION_STATE_CHANGED) refresh++
+            }
+        }
+        androidx.core.content.ContextCompat.registerReceiver(context, bluetoothEvents,
+            android.content.IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED)
         val observer = LifecycleEventObserver { _, event ->
             foreground = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
             if (event == Lifecycle.Event.ON_RESUME) refresh++
         }
         lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycle.removeObserver(observer)
+            context.unregisterReceiver(bluetoothEvents)
+        }
     }
     val permissions = remember {
         if (Build.VERSION.SDK_INT >= 31) arrayOf(BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT)

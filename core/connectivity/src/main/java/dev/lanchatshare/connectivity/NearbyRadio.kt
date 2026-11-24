@@ -94,7 +94,11 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
                 launch {
                     while (isActive) {
                         delay(5000)
-                        if (!radio.isEnabled) { fail("Bluetooth is off. Turn it on and retry."); return@launch }
+                        val enabled = try { radio.isEnabled } catch (_: SecurityException) {
+                            fail("Bluetooth permission was removed. Allow discovery to continue.")
+                            return@launch
+                        }
+                        if (!enabled) { fail("Bluetooth is off. Turn it on and retry."); return@launch }
                         mutable.update { it.copy(devices = it.devices.filterValues { device -> SystemClock.elapsedRealtime() - device.seen < 30000 }) }
                     }
                 }
