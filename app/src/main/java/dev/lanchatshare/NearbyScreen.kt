@@ -6,7 +6,7 @@ import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.net.Uri
+import androidx.core.net.toUri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -43,7 +43,8 @@ import dev.lanchatshare.data.Profile
         if (Build.VERSION.SDK_INT >= 31) arrayOf(BLUETOOTH_SCAN, BLUETOOTH_ADVERTISE, BLUETOOTH_CONNECT)
         else arrayOf(ACCESS_FINE_LOCATION)
     }
-    val allowed = remember(refresh, foreground) { permissions.all { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED } }
+    fun hasPermissions() = permissions.all { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }
+    val allowed = remember(refresh, foreground) { hasPermissions() }
     val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { refresh++ }
     val enable = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { refresh++ }
     val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
@@ -58,6 +59,9 @@ import dev.lanchatshare.data.Profile
         onDispose { radio?.close() }
     }
     val state = radio?.state?.collectAsStateWithLifecycle()?.value ?: NearbyState()
+    LaunchedEffect(state.status, foreground) {
+        if (allowed && !hasPermissions()) refresh++
+    }
     val trusted by trust.peers.collectAsStateWithLifecycle(emptyList())
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -67,9 +71,9 @@ import dev.lanchatshare.data.Profile
                     Text(if (Build.VERSION.SDK_INT >= 31) "Allow Nearby devices to find and verify phones over Bluetooth."
                         else "Android 11 requires location permission to scan for nearby Bluetooth phones.")
                     Button(onClick = { request.launch(permissions) }) { Text("Allow discovery") }
-                    TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + context.packageName))) }) { Text("App settings") }
+                    TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, ("package:" + context.packageName).toUri())) }) { Text("App settings") }
                 }
-                !ready -> Button(onClick = { enable.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) }) { Text("Turn on Bluetooth") }
+                !ready -> Button(onClick = { try { enable.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) } catch (_: SecurityException) { refresh++ } }) { Text("Turn on Bluetooth") }
                 !locationReady -> Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Turn on location for scanning") }
                 else -> Column {
                     Text(state.status)
@@ -99,3 +103,4 @@ import dev.lanchatshare.data.Profile
             dismissButton = { TextButton(onClick = { radio?.answer(false) }) { Text("Cancel") } })
     }
 }
+

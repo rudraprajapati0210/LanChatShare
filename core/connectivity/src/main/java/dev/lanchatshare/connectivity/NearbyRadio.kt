@@ -55,7 +55,11 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
             val port = bytes[1].toInt() and 255
             if (port !in 128..255) return
             val suffix = "%02X%02X".format(bytes[2], bytes[3])
-            val candidate = Candidate(result.device.address, bytes.copyOfRange(4, bytes.size).decodeToString(),
+            val address = try { result.device.address } catch (_: SecurityException) {
+                fail("Bluetooth permission was removed. Allow discovery to continue.")
+                return
+            }
+            val candidate = Candidate(address, bytes.copyOfRange(4, bytes.size).decodeToString(),
                 suffix, port, SystemClock.elapsedRealtime())
             mutable.update { it.copy(devices = it.devices + (candidate.address to candidate)) }
         }
@@ -115,6 +119,7 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
             mutable.update { it.copy(busy = true, status = "Checking the other phone…") }
         }
         scope.launch {
+            val deadline = SystemClock.elapsedRealtime() + 90000
             val timeout = launch {
                 delay(90000)
                 synchronized(guard) { if (active === socket) { decision?.complete(false); runCatching { socket.close() } } }
@@ -125,20 +130,26 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
                     identityKeys(), trust.dao::pin, wifiEndpoints(context)) { match ->
                     val wait = CompletableDeferred<Boolean>()
                     synchronized(guard) {
-                        if (closed || active !== socket) return@pair false
+                        if (closed || active !== socket || SystemClock.elapsedRealtime() >= deadline) return@pair false
                         decision = wait
                         mutable.update { it.copy(prompt = PairPrompt(match.name, match.id.takeLast(4).uppercase(), match.digits, match.changed)) }
                     }
-                    withTimeout(90000) { wait.await() }
+                    withTimeout((deadline - SystemClock.elapsedRealtime()).coerceAtLeast(1)) { wait.await() }
                 }
                 ensureActive()
+                check(SystemClock.elapsedRealtime() < deadline)
                 trust.dao.save(verified.peer)
                 trust.issue(verified.peer.id, verified.token, verified.endpoints, initiator)
                 val address = verified.endpoints.firstOrNull()?.display()
                 val route = address?.let { " Wi-Fi endpoint: $it." }.orEmpty()
                 mutable.update { it.copy(status = "Verified " + verified.peer.name + "." + route) }
             } catch (e: Exception) {
-                if (isActive) mutable.update { it.copy(status = "Pairing ended. Check both phones and try again.") }
+                val message = when {
+                    SystemClock.elapsedRealtime() >= deadline -> "Pairing timed out. Start again on both phones."
+                    e is SecurityException -> "Bluetooth permission changed. Check App settings."
+                    else -> "Pairing ended. Check both phones and try again."
+                }
+                if (isActive) mutable.update { it.copy(status = message) }
             } finally {
                 timeout.cancel()
                 runCatching { socket.close() }
@@ -167,4 +178,5 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
         }
     }
 }
+
 
