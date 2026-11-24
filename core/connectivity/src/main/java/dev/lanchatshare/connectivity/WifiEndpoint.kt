@@ -26,14 +26,6 @@ internal data class WifiEndpoint(val ipBytes: String, val port: Int) {
         return if (':' in ip) "[$ip]:$port" else "$ip:$port"
     }
 }
-@Suppress("DEPRECATION")
-internal fun wifiEndpoints(context: Context): List<WifiEndpoint> {
-    val manager = context.getSystemService(ConnectivityManager::class.java)
-    return manager.allNetworks.filter { network ->
-        val caps = manager.getNetworkCapabilities(network)
-        caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true &&
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-    }.flatMap { manager.getLinkProperties(it)?.linkAddresses.orEmpty() }
-        .map { WifiEndpoint(Base64.getEncoder().encodeToString(it.address.address), LAN_PORT) }
-        .filter { runCatching { it.address() }.isSuccess }.distinct().take(8)
-}
+internal fun wifiEndpoints(context: Context): List<WifiEndpoint> =
+    lanLinks(context).map { WifiEndpoint(Base64.getEncoder().encodeToString(it.address.address), LAN_PORT) }
+        .distinct().take(8)

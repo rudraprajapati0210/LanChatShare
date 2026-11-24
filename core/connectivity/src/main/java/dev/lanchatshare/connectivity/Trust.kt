@@ -17,20 +17,35 @@ data class TrustedPeer(@PrimaryKey val id: String, val name: String, val colour:
     fun observe(): Flow<List<TrustedPeer>>
     @Query("SELECT pin FROM trusted_peers WHERE id = :id")
     suspend fun pin(id: String): String?
+    @Query("SELECT * FROM trusted_peers WHERE id = :id")
+    suspend fun find(id: String): TrustedPeer?
+    @Query("UPDATE trusted_peers SET name = :name, colour = :colour WHERE id = :id AND pin = :pin AND (name != :name OR colour != :colour)")
+    suspend fun updateProfile(id: String, pin: String, name: String, colour: Int)
     @Upsert suspend fun save(peer: TrustedPeer)
 }
-@Database(entities = [TrustedPeer::class], version = 2, autoMigrations = [AutoMigration(from = 1, to = 2)])
+@Database(entities = [TrustedPeer::class, ChatMessage::class], version = 3, autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)])
 internal abstract class TrustDatabase : RoomDatabase() {
+    abstract fun messages(): MessageDao
     abstract fun peers(): PeerDao
 }
-class TrustStore(context: Context) {
-    private val database = Room.databaseBuilder(context.applicationContext, TrustDatabase::class.java, "peers.db").build()
+class TrustStore(context: Context, databaseName: String = "peers.db") {
+    private val database = Room.databaseBuilder(context.applicationContext, TrustDatabase::class.java, databaseName).build()
+    internal fun close() = database.close()
     internal val dao = database.peers()
+    internal val messages = database.messages()
+    val latest = messages.latest()
+    fun conversation(id: String) = messages.conversation(id)
+    suspend fun enqueue(peer: String, text: String) {
+        require(text.isNotBlank() && text.length <= 4096 && dao.pin(peer) != null)
+        messages.insert(ChatMessage(peer, true, java.util.UUID.randomUUID().toString(), text.trim(), System.currentTimeMillis(), false))
+    }
     val peers = dao.observe()
+    internal val hints = kotlinx.coroutines.flow.MutableStateFlow<Map<String, List<WifiEndpoint>>>(emptyMap())
     private data class Ticket(val bytes: ByteArray, val until: Long, val routes: List<WifiEndpoint>, val outgoing: Boolean)
     private val tickets = mutableMapOf<String, Ticket>()
     @Synchronized internal fun issue(id: String, bytes: ByteArray, routes: List<WifiEndpoint> = emptyList(), outgoing: Boolean = false) {
         tickets.entries.removeAll { it.value.until <= SystemClock.elapsedRealtime() }
+        hints.value = hints.value + (id to routes.toList())
         tickets[id] = Ticket(bytes.copyOf(), SystemClock.elapsedRealtime() + 120_000, routes.toList(), outgoing)
     }
     @Synchronized internal fun takeOutgoing(id: String): Pair<ByteArray, List<WifiEndpoint>>? {
@@ -39,6 +54,11 @@ class TrustStore(context: Context) {
         tickets.remove(id)
         if (ticket.until <= SystemClock.elapsedRealtime()) return null
         return ticket.bytes to ticket.routes
+    }
+    @Synchronized internal fun checkHandoff(id: String, presented: ByteArray?): Boolean {
+        val ticket = tickets[id]
+        if (presented != null) return consume(id, presented)
+        return ticket == null || ticket.outgoing || ticket.until <= SystemClock.elapsedRealtime()
     }
     @Synchronized fun consume(id: String, presented: ByteArray): Boolean {
         val ticket = tickets[id] ?: return false
@@ -66,4 +86,7 @@ internal fun identityCertificate(): ByteArray = KeyStore.getInstance("AndroidKey
         initialize(spec); generateKeyPair()
     }
 }
+
+
+
 
