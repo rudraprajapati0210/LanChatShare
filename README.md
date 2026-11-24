@@ -15,7 +15,8 @@ For the Compose flow test, use a fresh emulator or dedicated test device with em
 3. On a fresh pairing, cancel on either side or leave Nearby before accepting. Verify neither phone gains a trusted record. Retry. Switch Bluetooth off during pairing and restore it.
 4. Force-stop and reopen both apps. Reconnect. Matching pins on both phones skip the app code. Repeat with identical names and emoji. Advertisements carry a short name and device suffix. The handshake supplies the full name.
 5. Deny permission, then restore it from App settings. Check recovery and stale-device removal. Clearing app data on a dedicated test phone creates a new UUID and key.
-6. Run `./gradlew.bat :core:connectivity:testDebugUnitTest` for both confirmation paths, key changes, malformed frames and repeated connections. Compare discovery and bonding across manufacturers on physical phones.
+6. Leave the comparison open for 90 seconds. Verify pairing ends and neither new peer is saved. On a shared Wi-Fi network, pair again and check the verified status for the peer IP and port 47831. With Wi-Fi off, pairing should still succeed. Milestone C will bind the TLS listener and check reachability.
+7. Run `./gradlew.bat :core:connectivity:testDebugUnitTest` for both confirmation paths, key changes, malformed frames and repeated connections. Compare discovery and bonding across manufacturers on physical phones.
 
 ## Phone checks for milestone A
 
@@ -26,7 +27,7 @@ For the Compose flow test, use a fresh emulator or dedicated test device with em
 
 ## Upcoming network behaviour
 
-Pairing requests Bluetooth permissions at point of use. Android 11 requires location permission for BLE scanning. Android 12+ separates scan, advertise and connect permissions. Local-only hotspot on Android 13+ uses Nearby Wi-Fi Devices. Network and notification features will have version-specific rationales when implemented.
+Pairing requests Bluetooth permissions at point of use. Android 11 requires location permission for BLE scanning. Android 12+ separates scan, advertise and connect permissions. Reading the connected Wi-Fi interface uses ACCESS_NETWORK_STATE. The Nearby Wi-Fi Devices runtime permission will be requested for local-only hotspot creation in milestone C on Android 13+. Network and notification features will have version-specific rationales when implemented.
 
 For host testing in milestone C, turn mobile data off, turn on the phone hotspot, join from two clients, and open the app on all three phones. Verify host-to-client and client-to-host communication, then disconnect and rejoin one client. Manufacturer-specific discovery, numeric verification, and isolation behaviour need physical testing.
 
@@ -34,4 +35,5 @@ See [architecture and physical test scenarios](ARCHITECTURE.md), [design specifi
 
 
 If Windows reports “Could not find or load main class” followed by part of a PATH entry when launching Gradle Test Executor, check PATH for stray quotation marks. In PowerShell, run `$env:Path = $env:Path.Replace('"', '')` for the current shell, then rerun the test command with `--no-daemon`.
+
 
