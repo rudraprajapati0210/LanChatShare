@@ -1,0 +1,8 @@
+<resources>
+    <style name="Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#006457</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/brand_mark</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/wordmark</item><item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
+    </style>
+</resources>
+
