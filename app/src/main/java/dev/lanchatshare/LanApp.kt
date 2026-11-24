@@ -26,8 +26,11 @@ private val Context.profileStore by preferencesDataStore("profile")
 
 @Module @InstallIn(SingletonComponent::class)
 object StorageModule {
+    @Provides @Singleton fun chat(@ApplicationContext context: Context, trust: dev.lanchatshare.connectivity.TrustStore, profiles: ProfileRepository) =
+        dev.lanchatshare.connectivity.LanChat(context, trust, profiles)
     @Provides @Singleton fun trust(@ApplicationContext context: Context) = dev.lanchatshare.connectivity.TrustStore(context)
     @Provides @Singleton fun profiles(@ApplicationContext context: Context) = ProfileRepository(context.profileStore)
 }
+
 
 

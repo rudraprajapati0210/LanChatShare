@@ -18,6 +18,7 @@ import dev.lanchatshare.design.LanTheme
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @javax.inject.Inject lateinit var trustStore: dev.lanchatshare.connectivity.TrustStore
+    @javax.inject.Inject lateinit var chat: dev.lanchatshare.connectivity.LanChat
     private val profileModel: ProfileModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -38,7 +39,7 @@ class MainActivity : ComponentActivity() {
                                 Button(onClick = profileModel::read) { Text("Try again") }
                             }
                             is Gate.Ready -> current.profile?.let {
-                                Home(it, busy, failed, trustStore, profileModel::save)
+                                Home(it, busy, failed, trustStore, chat, profileModel::save)
                             } ?: NameForm(null, busy, failed, profileModel::save)
                         }
                     }
@@ -47,4 +48,5 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 

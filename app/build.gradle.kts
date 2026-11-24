@@ -5,14 +5,18 @@ plugins {
     alias(libs.plugins.ksp)
 }
 android {
+    packaging.resources {
+        merges += setOf("META-INF/license/**", "META-INF/LICENSE*", "META-INF/NOTICE*", "META-INF/services/**", "META-INF/native-image/**")
+        excludes += setOf("META-INF/INDEX.LIST", "META-INF/io.netty.versions.properties", "META-INF/DEPENDENCIES")
+    }
     namespace = "dev.lanchatshare"
     compileSdk { version = release(37) { minorApiLevel = 1 } }
     defaultConfig {
         minSdk = 30
         applicationId = "dev.lanchatshare"
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
@@ -35,5 +39,8 @@ dependencies {
     androidTestImplementation(libs.runner)
     androidTestImplementation(libs.ext)
 }
+
+
+
 
 

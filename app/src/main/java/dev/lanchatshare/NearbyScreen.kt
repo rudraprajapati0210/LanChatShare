@@ -26,7 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.lanchatshare.connectivity.*
 import dev.lanchatshare.data.Profile
 
-@Composable internal fun NearbyScreen(profile: Profile, trust: TrustStore) {
+@Composable internal fun NearbyScreen(profile: Profile, trust: TrustStore, openChat: (TrustedPeer) -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var foreground by remember { mutableStateOf(lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) }
@@ -100,7 +100,9 @@ import dev.lanchatshare.data.Profile
         }
         if (trusted.isNotEmpty()) item { Text("Trusted devices", style = MaterialTheme.typography.titleMedium) }
         items(trusted, key = { it.id }) { peer ->
-            Text(if (trusted.count { it.name == peer.name } > 1) peer.name + " · " + peer.id.takeLast(4).uppercase() else peer.name)
+            OutlinedButton(onClick = { openChat(peer) }) {
+                Text("Chat with " + peerLabel(peer, trusted))
+            }
         }
     }
     state.prompt?.let { prompt ->
@@ -114,4 +116,5 @@ import dev.lanchatshare.data.Profile
             dismissButton = { TextButton(onClick = { radio?.answer(false) }) { Text("Cancel") } })
     }
 }
+
 

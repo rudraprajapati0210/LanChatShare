@@ -1,5 +1,6 @@
 package dev.lanchatshare
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -75,10 +76,16 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
     }
 }
 
-@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, save: (String, Int?) -> Unit) {
+@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, save: (String, Int?) -> Unit) {
     var section by rememberSaveable { mutableStateOf("Chats") }
     var detail by rememberSaveable { mutableStateOf("") }
     var sharing by rememberSaveable { mutableStateOf(false) }
+    val trusted by trust.peers.collectAsStateWithLifecycle(emptyList())
+    var peerId by rememberSaveable { mutableStateOf("") }
+    val peer = trusted.find { it.id == peerId }
+    val openChat: (dev.lanchatshare.connectivity.TrustedPeer) -> Unit = {
+        section = "Chats"; detail = "Conversation"; peerId = it.id; sharing = false
+    }
     val page = if (sharing) "Share files" else detail.ifEmpty { section }
     fun back() { if (sharing) sharing = false else if (detail.isNotEmpty()) detail = "" else section = "Chats" }
     BackHandler(sharing || detail.isNotEmpty() || section != "Chats") { back() }
@@ -91,27 +98,27 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     if (sharing || detail.isNotEmpty()) TextButton(onClick = ::back) { Text("Back") }
-                    Text(page, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
+                    Text(if (page == "Conversation" && peer != null) peerLabel(peer, trusted) else page, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
                     if (!sharing) FilledTonalButton(onClick = { sharing = true }) { Text("Share files") }
                 }
+                if (trusted.isNotEmpty()) ChatAccess()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (page) {
-                        "Nearby" -> NearbyScreen(profile, trust)
+                        "Nearby" -> NearbyScreen(profile, trust, openChat)
+                        "Conversation" -> peer?.let { Conversation(it, trust, chat) }
+                        "Chats" -> ChatList(trusted, trust, chat, openChat) { select("Nearby") }
+                        "Network and hotspot" -> NetworkSettings(chat)
                         "Profile" -> NameForm(profile, busy, failed, save)
                         "Settings" -> Column {
                             ListItem(headlineContent = { Text("Profile") }, supportingContent = { Text(profile.name) },
                                 modifier = Modifier.clickable { detail = "Profile" })
+                            ListItem(headlineContent = { Text("Network and hotspot") }, modifier = Modifier.clickable { detail = "Network and hotspot" })
                             ListItem(headlineContent = { Text("About") }, modifier = Modifier.clickable { detail = "About" })
                         }
                         "About" -> Column(Modifier.padding(24.dp)) { Wordmark(); Text("Local messaging and file sharing.") }
                         else -> Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            if (page == "Chats") {
-                                Image(painterResource(R.drawable.nearby_phones), null, Modifier.size(120.dp),
-                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary))
-                                Text("Start your first chat", style = MaterialTheme.typography.headlineSmall)
-                                OutlinedButton(onClick = { select("Nearby") }) { Text("Find nearby devices") }
-                            } else Text(when (page) {
+                            Text(when (page) {
 
                                 "Library" -> "Files you send and receive will appear here."
                                 else -> "File transfers are coming in milestone E."
@@ -133,4 +140,5 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
         item(name, icon, label)
     }
 }
+
 
