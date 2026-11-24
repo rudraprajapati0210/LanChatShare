@@ -18,7 +18,7 @@ class PairingTest {
     private val bKey = key()
 
     private fun exchange(
-        pinA: String? = null, pinB: String? = null,
+        pinA: String? = null, pinB: String? = null, responderKeys: java.security.KeyPair = bKey,
         approveA: (Comparison) -> Boolean, approveB: (Comparison) -> Boolean
     ) = runBlocking {
         ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress()).use { server ->
@@ -26,7 +26,7 @@ class PairingTest {
                 it.soTimeout = 5000
                 runCatching {
                     pair(Frames(it.getInputStream(), it.getOutputStream()), initiator,
-                        if (initiator) a else b, if (initiator) aKey else bKey,
+                        if (initiator) a else b, if (initiator) aKey else responderKeys,
                         { if (initiator) pinA else pinB }, listOf(WifiEndpoint("wKgBBQ==", LAN_PORT)), { if (initiator) approveA(it) else approveB(it) })
                 }
             }
@@ -48,11 +48,26 @@ class PairingTest {
         assertEquals(b.name, atA.peer.name)
         assertEquals(a.id, atB.peer.id)
         assertArrayEquals(atA.token, atB.token)
-        val again = exchange(atA.peer.pin, atB.peer.pin, { error("unexpected prompt") }, { error("unexpected prompt") })
+        val again = exchange(atA.peer.pin, atB.peer.pin, approveA = { error("unexpected prompt") }, approveB = { error("unexpected prompt") })
         assertFalse(again.first.getOrThrow().token.contentEquals(atA.token))
         assertEquals(atB.peer, again.second.getOrThrow().peer)
-        val changed = exchange("different", atB.peer.pin, { it.changed }, { !it.changed })
+        val changed = exchange("different", atB.peer.pin, approveA = { it.changed }, approveB = { !it.changed })
         assertTrue(changed.first.isSuccess && changed.second.isSuccess)
+    }
+
+    @Test fun mismatchedSigningKeyCannotProveTheAnnouncedIdentity() {
+        val wrong = java.security.KeyPair(bKey.public, key().private)
+        var askedSender = false
+        val result = exchange(responderKeys = wrong, approveA = { askedSender = true; true }, approveB = { true })
+        assertTrue(result.first.isFailure && result.second.isFailure)
+        assertFalse(askedSender)
+    }
+
+    @Test fun routeHintsRejectInvalidAddressesAndPorts() {
+        for (host in listOf("AAAAAA==", "fwAAAQ==", "4AAAAQ==", "bad:length")) {
+            assertThrows(IllegalArgumentException::class.java) { WifiEndpoint(host, LAN_PORT).address() }
+        }
+        assertThrows(IllegalArgumentException::class.java) { WifiEndpoint("wKgBBQ==", 65536).address() }
     }
 
     @Test fun decliningOnEitherDevicePreventsVerification() {

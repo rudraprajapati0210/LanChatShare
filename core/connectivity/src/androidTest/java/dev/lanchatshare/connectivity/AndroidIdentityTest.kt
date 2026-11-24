@@ -50,5 +50,12 @@ class AndroidIdentityTest {
         assertFalse(store.consume("first", ByteArray(32)))
         assertTrue(store.consume("first", token))
         assertFalse(store.consume("first", token))
+        val routes = listOf(WifiEndpoint("wKgBBQ==", LAN_PORT))
+        store.issue("outgoing", token, routes, outgoing = true)
+        assertFalse(store.consume("outgoing", token))
+        val outbound = requireNotNull(store.takeOutgoing("outgoing"))
+        assertArrayEquals(token, outbound.first)
+        assertEquals(routes, outbound.second)
+        assertNull(store.takeOutgoing("outgoing"))
     }
 }

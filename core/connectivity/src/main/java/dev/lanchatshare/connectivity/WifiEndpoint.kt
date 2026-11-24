@@ -22,7 +22,7 @@ internal data class WifiEndpoint(val ipBytes: String, val port: Int) {
         return ip
     }
     fun display(): String {
-        val ip = address().hostAddress
+        val ip = requireNotNull(address().hostAddress)
         return if (':' in ip) "[$ip]:$port" else "$ip:$port"
     }
 }
