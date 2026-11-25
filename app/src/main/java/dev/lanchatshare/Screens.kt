@@ -76,7 +76,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
     }
 }
 
-@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, incoming: IncomingShare?, consumed: () -> Unit, save: (String, Int?) -> Unit) {
+@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, incoming: IncomingShare?, consumed: () -> Unit, chatTarget: String?, opened: () -> Unit, save: (String, Int?) -> Unit) {
     var section by rememberSaveable { mutableStateOf("Chats") }
     var detail by rememberSaveable { mutableStateOf("") }
     var sharing by rememberSaveable { mutableStateOf(false) }
@@ -87,6 +87,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
         section = "Chats"; detail = "Conversation"; peerId = it.id; sharing = false
     }
     LaunchedEffect(incoming) { if (incoming != null) sharing = true }
+    LaunchedEffect(chatTarget, trusted) { trusted.find { it.id == chatTarget }?.let { openChat(it); opened() } }
     val page = if (sharing) "Share files" else detail.ifEmpty { section }
     fun back() { if (sharing) sharing = false else if (detail.isNotEmpty()) detail = "" else section = "Chats" }
     BackHandler(sharing || detail.isNotEmpty() || section != "Chats") { back() }
@@ -102,7 +103,10 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                     Text(if (page == "Conversation" && peer != null) peerLabel(peer, trusted) else page, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.headlineSmall)
                     if (!sharing) FilledTonalButton(onClick = { sharing = true }) { Text("Share files") }
                 }
-                if (trusted.isNotEmpty()) ChatAccess()
+                if (trusted.isNotEmpty()) {
+                    ChatAccess()
+                    if (page == "Chats") NotificationAccess()
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (page) {
                         "Share files" -> ShareScreen(trusted, trust.transfers, incoming, consumed, peer?.id.takeIf { detail == "Conversation" })
@@ -111,7 +115,11 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                         "Chats" -> ChatList(trusted, trust, chat, openChat) { select("Nearby") }
                         "Network and hotspot" -> NetworkSettings(chat)
                         "Profile" -> NameForm(profile, busy, failed, save)
+                        "Notifications" -> NotificationSettings()
+                        "Diagnostics" -> Diagnostics()
                         "Settings" -> Column {
+                            TextButton(onClick = { detail = "Notifications" }) { Text("Notifications and reachability") }
+                            TextButton(onClick = { detail = "Diagnostics" }) { Text("Diagnostics") }
                             ListItem(headlineContent = { Text("Profile") }, supportingContent = { Text(profile.name) },
                                 modifier = Modifier.clickable { detail = "Profile" })
                             ListItem(headlineContent = { Text("Network and hotspot") }, modifier = Modifier.clickable { detail = "Network and hotspot" })

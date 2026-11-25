@@ -12,9 +12,14 @@ import kotlinx.coroutines.*
 class ChatService : Service() {
     @Inject lateinit var chat: LanChat
     @Inject lateinit var trust: dev.lanchatshare.connectivity.TrustStore
+    companion object {
+        internal val running = kotlinx.coroutines.flow.MutableStateFlow(false)
+        internal val foreground = kotlinx.coroutines.flow.MutableStateFlow(false)
+    }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     override fun onCreate() {
         super.onCreate()
+        channels()
         val channel = "local_chat"
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(channel, "LAN connection", NotificationManager.IMPORTANCE_LOW))
@@ -23,6 +28,14 @@ class ChatService : Service() {
         startForeground(31, Notification.Builder(this, channel).setSmallIcon(R.drawable.nav_chat)
             .setContentTitle("LanChatShare").setContentText("Available for local chats")
             .setContentIntent(launch).setOngoing(true).build())
+        running.value = true
+        scope.launch {
+            kotlinx.coroutines.flow.combine(alerts,foreground,trust.transfers.all) { opts, visible, rows ->
+                !opts.reachable && !visible && rows.none { it.state == "active" }
+            }.collect { if (it) stopSelf() }
+        }
+        scope.launch { observeTexts(trust) }
+        scope.launch { observeProgress(trust) }
         scope.launch { observeOffers(trust) }
         scope.launch {
             try { chat.run() }
@@ -31,6 +44,6 @@ class ChatService : Service() {
         }
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+    override fun onDestroy() { running.value = false; scope.cancel(); super.onDestroy() }
     override fun onBind(intent: Intent?): IBinder? = null
 }

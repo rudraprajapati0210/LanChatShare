@@ -73,6 +73,10 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
 }
 
 @Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat, networkSettings: () -> Unit) {
+    LifecycleResumeEffect(peer.id) {
+        openConversation.value = peer.id
+        onPauseOrDispose { openConversation.compareAndSet(peer.id,null) }
+    }
     val history by remember(peer.id) { trust.conversation(peer.id) }.collectAsStateWithLifecycle(emptyList())
     val online by chat.online.collectAsStateWithLifecycle()
     val network by chat.networkStatus.collectAsStateWithLifecycle()

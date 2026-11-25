@@ -95,9 +95,6 @@ import java.io.IOException
     var jobs by rememberSaveable { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
-    var canNotify by remember { mutableStateOf(android.os.Build.VERSION.SDK_INT < 33 ||
-        context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) }
-    val notifications = rememberLauncherForActivityResult(RequestPermission()) { canNotify = it }
     val transfers by files.all.collectAsStateWithLifecycle(emptyList())
     fun add(uris: List<Uri>) { selected = ArrayList((selected + uris.map(Uri::toString)).distinct()) }
     LaunchedEffect(incoming) {
@@ -118,7 +115,7 @@ import java.io.IOException
             FilterChip(jobs, { jobs = true }, { Text("Transfers") })
         } }
         if (jobs) {
-            if (android.os.Build.VERSION.SDK_INT >= 33 && !canNotify) item { TextButton(onClick = { notifications.launch(android.Manifest.permission.POST_NOTIFICATIONS) }) { Text("Notify me about incoming files") } }
+            item { NotificationAccess() }
             if (transfers.isEmpty()) item { Text("Your first transfer will appear here.") }
             val sections = transfers.groupBy { row -> when (row.state) {
                 "active", "paused", "failed", "storage", "invalid" -> "In progress"

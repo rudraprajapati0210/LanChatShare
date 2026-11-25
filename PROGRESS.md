@@ -1,5 +1,9 @@
 # LanChatShare progress
 
+## Background reliability phase
+
+Bug 4 reproduced on API 37 with notifications granted. The baseline saved the incoming text but posted only the connection notification. The updated build posts MessagingStyle alerts and the Mark as read regression passes. Room v5 treats existing messages as read on upgrade. Notification controls, inline reply, deep links, file decisions and transfer progress actions are in place. Next is screen-off transfer scheduling and power management.
+
 ## Current checkpoint — Share and inline photos
 
 The user confirmed physical verification of chat and Wi-Fi/hotspot operation. Milestone E adds auto-scroll, photo sharing in conversations, inline previews, a multi-recipient Share hub and a transfer journal. Room v4 preserves existing messages and peers. Consent and receipts travel over chat. File contents use authenticated HTTPS ranges and SHA-256 verification. The sender stages one immutable copy across recipients.

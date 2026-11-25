@@ -25,7 +25,7 @@ data class TrustedPeer(@PrimaryKey val id: String, val name: String, val colour:
     suspend fun forget(id: String, pin: String): Int
     @Upsert suspend fun save(peer: TrustedPeer)
 }
-@Database(entities = [TrustedPeer::class, ChatMessage::class, Transfer::class], version = 4, autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)])
+@Database(entities = [TrustedPeer::class, ChatMessage::class, Transfer::class], version = 5, autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5)])
 internal abstract class TrustDatabase : RoomDatabase() {
     abstract fun transfers(): TransferDao
     abstract fun messages(): MessageDao
@@ -37,6 +37,8 @@ class TrustStore(context: Context, databaseName: String = "peers.db") {
     internal fun close() = database.close()
     internal val dao = database.peers()
     internal val messages = database.messages()
+    val unread = messages.unread()
+    suspend fun markRead(peer: String, through: Long = Long.MAX_VALUE) = messages.read(peer, through)
     val latest = messages.latest()
     fun conversation(id: String) = messages.conversation(id)
     suspend fun enqueue(peer: String, text: String): Unit = database.withTransaction {
@@ -45,7 +47,7 @@ class TrustStore(context: Context, databaseName: String = "peers.db") {
     }
     internal suspend fun saveIncoming(peer: TrustedPeer, message: ChatMessage) = database.withTransaction {
         check(dao.pin(peer.id) == peer.pin)
-        messages.insert(message)
+        messages.insert(message.copy(unread = !message.outgoing && !message.attachment))
     }
     suspend fun forget(peer: TrustedPeer) {
         database.withTransaction {

@@ -89,6 +89,7 @@ class Transfers internal constructor(private val context: Context, private val d
         val allowed = when (next) {
             "active" -> row.state in listOf("paused", "failed", "storage", "invalid") || (!row.outgoing && row.state == "offered")
             "paused" -> row.state == "active"
+            "cancelled" -> row.state in listOf("active","paused","failed","storage","invalid","offered")
             "declined" -> !row.outgoing && row.state == "offered"
             else -> false
         }

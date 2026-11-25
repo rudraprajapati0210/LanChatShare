@@ -102,7 +102,7 @@ internal suspend fun Transfers.receive(row: Transfer, client: HttpClient, origin
 internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files: Transfers) {
     var previous = emptySet<ChatFrame>()
     files.dao.observe(peer.id, peer.pin).map { rows -> rows.mapNotNull { row ->
-        val type = if (row.outgoing) when (row.state) {
+        val type = if (row.state == "cancelled") "file.decline" else if (row.outgoing) when (row.state) {
             "offered" -> "file.offer"
             "active" -> "file.grant"
             else -> null
@@ -113,7 +113,7 @@ internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files
             else -> null
         }
         type?.let { ChatFrame(it, id = row.id, text = row.name, size = row.size, hash = row.hash,
-            mime = row.mime, token = if (it == "file.grant") row.token else null) }
+            key = if (row.state == "cancelled") (if (row.outgoing) "cancel-sent" else "cancel-received") else "", mime = row.mime, token = if (it == "file.grant") row.token else null) }
     } }.distinctUntilChanged().collect { frames ->
         frames.filterNot { it in previous }.forEach { write(it) }
         previous = frames.toSet()

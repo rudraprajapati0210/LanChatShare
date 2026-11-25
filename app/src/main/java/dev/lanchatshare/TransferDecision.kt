@@ -17,13 +17,15 @@ import kotlinx.coroutines.flow.*
 class TransferDecision : BroadcastReceiver() {
     @Inject lateinit var trust: TrustStore
     override fun onReceive(context: Context, intent: Intent) {
-        val (peer, id, decision) = intent.data?.pathSegments?.takeIf { it.size == 3 } ?: return
-        if (decision !in listOf("active", "declined")) return
+        val parts = intent.data?.pathSegments?.takeIf { it.size in 3..4 } ?: return
+        val (peer, id, decision) = parts
+        val outgoing = parts.getOrNull(3) == "sent"
+        if (decision !in listOf("active", "declined", "paused", "cancelled")) return
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val row = trust.transfers.all.first().find { it.peer == peer && it.id == id && !it.outgoing }
-                if (row?.state == "offered") trust.transfers.action(row, decision)
+                val row = trust.transfers.all.first().find { it.peer == peer && it.id == id && it.outgoing == outgoing }
+                if (row != null && (decision != "active" || row.state == "offered")) trust.transfers.action(row, decision)
             } finally { pending.finish() }
         }
     }
@@ -31,14 +33,14 @@ class TransferDecision : BroadcastReceiver() {
 
 internal suspend fun Service.observeOffers(trust: TrustStore) {
     val manager = getSystemService(NotificationManager::class.java)
-    val channel = "incoming_files"
-    manager.createNotificationChannel(NotificationChannel(channel, "Incoming files", NotificationManager.IMPORTANCE_DEFAULT))
+    val channel = "file_requests"
+    manager.createNotificationChannel(NotificationChannel(channel, "Incoming files", NotificationManager.IMPORTANCE_HIGH))
     var shown = emptySet<String>()
     trust.transfers.all.combine(trust.peers) { files, peers ->
         val names = peers.associateBy { it.id }
         files.filter { !it.outgoing && it.state == "offered" && names[it.peer]?.pin == it.pin }
             .associateWith { names.getValue(it.peer).name }
-    }.distinctUntilChanged().collect { offers ->
+    }.combine(alerts) { offers, prefs -> (if (prefs.files) offers else emptyMap()) to prefs }.distinctUntilChanged().combine(alertPermission) { state, _ -> state }.collect { (offers,prefs) ->
         val current = offers.keys.map { it.peer + "/" + it.id }.toSet()
         (shown - current).forEach { manager.cancel(it, 1) }
         if (Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
@@ -53,7 +55,8 @@ internal suspend fun Service.observeOffers(trust: TrustStore) {
                     }
                     val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
                     manager.notify(tag, 1, Notification.Builder(this, channel).setSmallIcon(R.drawable.nav_chat)
-                        .setContentTitle("$name wants to send a file").setContentText(row.name).setContentIntent(open)
+                        .setContentTitle("$name wants to send a file").setContentText(if (prefs.preview) row.name else "Incoming file").setVisibility(if (prefs.hideLocked) Notification.VISIBILITY_SECRET else Notification.VISIBILITY_PUBLIC)
+                        .apply { if (prefs.muted(java.time.LocalTime.now().hour)) setGroup("quiet-files").setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY) }.setContentIntent(open)
                         .setOnlyAlertOnce(true).addAction(Notification.Action.Builder(null, "Accept", decision("active")).build())
                         .addAction(Notification.Action.Builder(null, "Decline", decision("declined")).build()).build())
                 }

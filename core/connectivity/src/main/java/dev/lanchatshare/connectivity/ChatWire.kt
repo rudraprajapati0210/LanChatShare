@@ -90,9 +90,10 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
             when (event.type) {
                 "file.offer" -> trust.transfers.offer(peer, event)
                 "file.want", "file.decline" -> {
-                    val row = trust.transfers.dao.get(peer.id, true, event.id)
+                    val row = trust.transfers.dao.get(peer.id, event.type != "file.decline" || event.key != "cancel-sent", event.id)
                     if (row?.pin == peer.pin) {
-                        if (event.type == "file.decline") trust.transfers.dao.change(peer.id, true, row.id, "offered", "declined")
+                        if (event.type == "file.decline" && event.key.startsWith("cancel-")) trust.transfers.action(row,"cancelled")
+                        else if (event.type == "file.decline") trust.transfers.dao.change(peer.id, true, row.id, "offered", "declined")
                         else if (row.state == "offered") trust.transfers.dao.change(peer.id, true, row.id, "offered", "active")
                         else if (row.state == "active") ws.write(ChatFrame("file.grant", id = row.id, token = row.token))
                     }

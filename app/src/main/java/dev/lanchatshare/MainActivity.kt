@@ -36,13 +36,18 @@ class MainActivity : ComponentActivity() {
     @javax.inject.Inject lateinit var trustStore: dev.lanchatshare.connectivity.TrustStore
     @javax.inject.Inject lateinit var chat: dev.lanchatshare.connectivity.LanChat
     private val profileModel: ProfileModel by viewModels()
+    private var chatTarget by mutableStateOf<String?>(null)
     private var pendingShare by mutableStateOf<IncomingShare?>(null)
+    override fun onStart() { super.onStart(); ChatService.foreground.value = true }
+    override fun onStop() { ChatService.foreground.value = false; super.onStop() }
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        chatTarget = intent.takeIf { it.action == "dev.lanchatshare.OPEN_CHAT" }?.data?.lastPathSegment
         pendingShare = intent.incomingShare()
     }
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        outState.putString("chatTarget",chatTarget)
         pendingShare?.let {
             outState.putStringArrayList("incomingUris", ArrayList(it.uris))
             outState.putString("incomingText", it.text)
@@ -51,6 +56,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        chatTarget = if (savedInstanceState == null) intent.takeIf { it.action == "dev.lanchatshare.OPEN_CHAT" }?.data?.lastPathSegment else savedInstanceState.getString("chatTarget")
         pendingShare = if (savedInstanceState == null) intent.incomingShare()
             else savedInstanceState.getStringArrayList("incomingUris")?.let { IncomingShare(it, savedInstanceState.getString("incomingText").orEmpty()) }
         enableEdgeToEdge()
@@ -69,7 +75,7 @@ class MainActivity : ComponentActivity() {
                                 Button(onClick = profileModel::read) { Text("Try again") }
                             }
                             is Gate.Ready -> current.profile?.let {
-                                Home(it, busy, failed, trustStore, chat, pendingShare, { pendingShare = null }, profileModel::save)
+                                Home(it, busy, failed, trustStore, chat, pendingShare, { pendingShare = null }, chatTarget, { chatTarget = null }, profileModel::save)
                             } ?: NameForm(null, busy, failed, profileModel::save)
                         }
                     }
