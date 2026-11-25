@@ -56,8 +56,8 @@ private object LocalHotspot {
 @Composable internal fun NetworkSettings(chat: LanChat) {
     val context = LocalContext.current
     val status by chat.networkStatus.collectAsStateWithLifecycle()
-    val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        if (it) LocalHotspot.start(context) else LocalHotspot.message = "Permission is needed to create a local Wi-Fi network."
+    val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
+        if (grants.isNotEmpty() && grants.values.all { it }) LocalHotspot.start(context) else LocalHotspot.message = "Permission is needed to create a local Wi-Fi network."
     }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(status, style = MaterialTheme.typography.titleMedium)
@@ -65,8 +65,8 @@ private object LocalHotspot {
         val network = LocalHotspot.reservation
         if (network == null) {
             Button(enabled = !LocalHotspot.starting, onClick = {
-                request.launch(if (Build.VERSION.SDK_INT >= 33) android.Manifest.permission.NEARBY_WIFI_DEVICES
-                    else android.Manifest.permission.ACCESS_FINE_LOCATION)
+                request.launch(if (Build.VERSION.SDK_INT >= 33) arrayOf(android.Manifest.permission.NEARBY_WIFI_DEVICES)
+                    else arrayOf(android.Manifest.permission.ACCESS_COARSE_LOCATION, android.Manifest.permission.ACCESS_FINE_LOCATION))
             }) { Text("Create LanChatShare network") }
         } else {
             @Suppress("DEPRECATION") val name = network.softApConfiguration.ssid
