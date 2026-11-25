@@ -35,9 +35,12 @@ internal val alertPermission = MutableStateFlow(0)
 internal fun Context.mayNotify() = Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 internal fun Context.channels() {
     val nm = getSystemService(NotificationManager::class.java)
-    nm.createNotificationChannels(listOf(NotificationChannel("messages","Messages",4),
-        NotificationChannel("file_requests","File requests",4),NotificationChannel("transfer_progress","Transfers",2),
-        NotificationChannel("local_chat","Connection status",2)))
+    val oldFiles = nm.getNotificationChannel("incoming_files")
+    val fileChannel = NotificationChannel("file_requests","File requests",NotificationManager.IMPORTANCE_HIGH)
+    if (oldFiles?.hasUserSetImportance() == true) fileChannel.importance = oldFiles.importance
+    nm.createNotificationChannels(listOf(NotificationChannel("messages","Messages",NotificationManager.IMPORTANCE_HIGH),
+        fileChannel,NotificationChannel("transfer_progress","Transfers",NotificationManager.IMPORTANCE_LOW),
+        NotificationChannel("local_chat","Connection status",NotificationManager.IMPORTANCE_LOW)))
 }
 internal fun Context.openPeer(id: String) = PendingIntent.getActivity(this, 0,
     Intent(this, MainActivity::class.java).setAction("dev.lanchatshare.OPEN_CHAT")
@@ -45,7 +48,7 @@ internal fun Context.openPeer(id: String) = PendingIntent.getActivity(this, 0,
     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
 private fun avatar(row: UnreadText): Icon {
-    val bitmap = Bitmap.createBitmap(64,64,Bitmap.Config.ARGB_8888)
+    val bitmap = androidx.core.graphics.createBitmap(64,64)
     val canvas = Canvas(bitmap)
     val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     paint.color = listOf(0xff195950,0xff864728,0xff495b82,0xff75495b)[row.colour.coerceIn(0,3)].toInt()
@@ -88,6 +91,7 @@ internal suspend fun Service.observeTexts(trust: TrustStore) {
                     .addRemoteInput(RemoteInput.Builder("text").setLabel("Reply").build()).build())
                 .addAction(Notification.Action.Builder(null,"Mark as read",action("read")).build())
             if (options.muted(LocalTime.now().hour)) builder.setGroup("quiet-messages").setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)
+            if (previous[peer]?.first == last.sequence) builder.setOnlyAlertOnce(true)
             nm.notify(peer,42,builder.build())
             previous[peer] = last.sequence to options
         }

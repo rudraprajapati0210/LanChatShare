@@ -52,6 +52,7 @@ class TrustStore(context: Context, databaseName: String = "peers.db") {
     suspend fun forget(peer: TrustedPeer) {
         database.withTransaction {
             if (dao.forget(peer.id, peer.pin) == 1) {
+                messages.read(peer.id,Long.MAX_VALUE)
                 database.transfers().revoke(peer.id)
                 messages.deletePending(peer.id)
                 synchronized(this@TrustStore) {

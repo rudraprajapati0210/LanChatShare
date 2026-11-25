@@ -44,6 +44,11 @@ class BackgroundTest {
                         }
                     }
                     assertTrue(notification.actions.any { !it.remoteInputs.isNullOrEmpty() })
+                    val reply = notification.actions.single { it.title == "Reply" }
+                    val response = Intent()
+                    android.app.RemoteInput.addResultsToIntent(reply.remoteInputs,response,android.os.Bundle().apply { putCharSequence("text","From notification") })
+                    reply.actionIntent.send(context,0,response)
+                    runBlocking { withTimeout(5000) { trust.conversation(peer).first { rows -> rows.any { it.outgoing && it.text == "From notification" } } } }
                     notification.actions.single { it.title == "Mark as read" }.actionIntent.send()
                     runBlocking { withTimeout(5000) { while (manager.activeNotifications.any { it.tag == peer }) delay(100) } }
                 } finally {
