@@ -8,6 +8,8 @@ Bug 2 reproduced by stopping the original scheduled worker after it started read
 
 Step 1 automated checks passed on API 37, including the stopped-worker regression, forced-idle scheduling, CPU lease release, inline Reply, Mark as read and encrypted range transfer. No physical phones were attached. Sender-only, receiver-only and simultaneous lock tests at 5 and 15 minutes remain open, including throughput and checksum comparison. Next engineering step is recording the original transfer-speed baseline on two phones before changing the range protocol for bugs 1 and 3. The README contains the phase acceptance checklist.
 
+Final step 1 validation built the debug APK, passed 13 JVM tests and 11 Android tests, and reported zero lint errors and three existing warnings. A separate screen-off emulator run passed the two-identity TLS chat and resumable range-transfer test in 16 seconds. Physical Wi-Fi throughput while locked is still unmeasured.
+
 ## Previous checkpoint — Share and inline photos
 
 The user confirmed physical verification of chat and Wi-Fi/hotspot operation. Milestone E adds auto-scroll, photo sharing in conversations, inline previews, a multi-recipient Share hub and a transfer journal. Room v4 preserves existing messages and peers. Consent and receipts travel over chat. File contents use authenticated HTTPS ranges and SHA-256 verification. The sender stages one immutable copy across recipients.
