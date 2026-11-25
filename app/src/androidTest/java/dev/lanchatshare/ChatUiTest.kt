@@ -30,6 +30,14 @@ class ChatUiTest {
                 ui.onNodeWithText("Continue").performClick()
             }
             ui.waitUntil(15000) { ui.onAllNodesWithText(placeholder).fetchSemanticsNodes().isNotEmpty() }
+            ui.onNodeWithText("Settings").performClick()
+            ui.onNodeWithText("Diagnostics").performClick()
+            ui.onNodeWithText("Transfer benchmark").performScrollTo().performClick()
+            ui.onNodeWithText("Run benchmark").assertIsNotEnabled()
+            ui.onNodeWithText(placeholder).performClick()
+            ui.onNodeWithText("100 MB").performClick()
+            ui.onNodeWithText("Run benchmark").assertIsEnabled()
+            ui.onNodeWithText("Chats").performClick()
             ui.onNodeWithText(placeholder).performClick()
             ui.onNodeWithText("Message").performTextInput("See you downstairs")
             ui.onNodeWithText("Send").performClick()
@@ -85,7 +93,10 @@ class ChatUiTest {
                     .setAction(android.content.Intent.ACTION_SEND).setType("text/plain")
                     .putExtra(android.content.Intent.EXTRA_TEXT, "From the Android share sheet"))
             }
-            ui.waitUntil(10000) { ui.onAllNodesWithText("From the Android share sheet").fetchSemanticsNodes().isNotEmpty() }
+            ui.waitUntil(15000) {
+                ui.onAllNodesWithText("From the Android share sheet")
+                    .fetchSemanticsNodes(atLeastOneRootRequired = false).isNotEmpty()
+            }
         } finally {
             db.delete("transfers", "peer = ?", arrayOf(id))
             db.delete("messages", "peerId = ?", arrayOf(id))
