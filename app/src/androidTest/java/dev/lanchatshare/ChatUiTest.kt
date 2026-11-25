@@ -35,10 +35,24 @@ class ChatUiTest {
             ui.onNodeWithText("Send").performClick()
             ui.waitUntil(15000) { ui.onAllNodesWithText("Queued").fetchSemanticsNodes().isNotEmpty() }
             ui.activityRule.scenario.recreate()
+            ui.waitUntil(15000) { ui.onAllNodesWithText("See you downstairs").fetchSemanticsNodes().isNotEmpty() }
             ui.onNodeWithText("See you downstairs").assertIsDisplayed()
             ui.onNodeWithText("Nearby").performClick()
             ui.onNodeWithText("Chat with Test phone").performClick()
+            ui.waitUntil(15000) { ui.onAllNodesWithText("See you downstairs").fetchSemanticsNodes().isNotEmpty() }
             ui.onNodeWithText("See you downstairs").assertIsDisplayed()
+            val trust = ui.activity.trustStore
+            runBlocking { repeat(36) { trust.enqueue(id, "Older note $it") } }
+            ui.waitUntil(15000) { ui.onAllNodesWithText("Older note 35").fetchSemanticsNodes().isNotEmpty() }
+            ui.onNode(hasScrollToIndexAction()).performScrollToIndex(34)
+            db.execSQL("INSERT INTO messages(peerId,outgoing,id,text,time,delivered) VALUES(?,0,?,?,?,1)",
+                arrayOf<Any>(id, UUID.randomUUID().toString(), "New incoming message", System.currentTimeMillis() + 60000))
+            runBlocking { trust.enqueue(id, "Refresh conversation") }
+            ui.waitUntil(15000) { ui.onAllNodesWithText("New incoming message").fetchSemanticsNodes().isNotEmpty() }
+            ui.onNodeWithText("New incoming message").assertIsDisplayed()
+            ui.onNodeWithText("Photo").assertIsDisplayed()
+            ui.onNodeWithText("Share files").performClick()
+            ui.onNodeWithText("Transfers").assertIsDisplayed()
         } finally {
             db.delete("messages", "peerId = ?", arrayOf(id))
             db.delete("trusted_peers", "id = ?", arrayOf(id))

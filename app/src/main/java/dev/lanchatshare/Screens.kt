@@ -104,6 +104,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                 if (trusted.isNotEmpty()) ChatAccess()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (page) {
+                        "Share files" -> ShareScreen(trusted, trust.transfers)
                         "Nearby" -> NearbyScreen(profile, trust, openChat)
                         "Conversation" -> peer?.let { Conversation(it, trust, chat) { section = "Settings"; detail = "Network and hotspot" } }
                         "Chats" -> ChatList(trusted, trust, chat, openChat) { select("Nearby") }

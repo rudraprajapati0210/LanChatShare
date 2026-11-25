@@ -1,0 +1,171 @@
+package dev.lanchatshare
+
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.provider.ContactsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.lanchatshare.connectivity.*
+import kotlinx.coroutines.*
+import java.io.IOException
+
+@Composable internal fun TransferItem(row: Transfer, files: Transfers, preview: Boolean = false) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var problem by remember(row.id) { mutableStateOf(false) }
+    val available = row.outgoing || row.state == "done"
+    val save = rememberLauncherForActivityResult(CreateDocument(row.mime.ifBlank { "application/octet-stream" })) { dest ->
+        if (dest != null) scope.launch {
+            try { withContext(Dispatchers.IO) {
+                requireNotNull(context.contentResolver.openOutputStream(dest)).use { out -> files.file(row).inputStream().use { it.copyTo(out) } }
+            }; problem = false } catch (e: CancellationException) { throw e } catch (_: Exception) { problem = true }
+        }
+    }
+    Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (available && preview && row.mime.startsWith("image/")) {
+            val bitmap by produceState<android.graphics.Bitmap?>(null, row.peer, row.id, available) {
+                value = withContext(Dispatchers.IO) { try {
+                    ImageDecoder.decodeBitmap(ImageDecoder.createSource(files.file(row))) { decoder, info, _ ->
+                        decoder.setTargetSampleSize(maxOf(1, (maxOf(info.size.width, info.size.height) + 639) / 640))
+                    }
+                } catch (_: IOException) { null } }
+            }
+            bitmap?.let { Image(it.asImageBitmap(), row.name, Modifier.fillMaxWidth().heightIn(max = 224.dp)) }
+        }
+        Text(row.name, style = MaterialTheme.typography.titleSmall)
+        val state = when (row.state) {
+            "offered" -> if (row.outgoing) "Waiting for acceptance" else "Ready to receive"
+            "active" -> "Transferring"
+            "done" -> if (row.outgoing) "Delivered" else "Received"
+            "failed" -> "Transfer interrupted"
+            else -> row.state.replaceFirstChar { it.uppercase() }
+        }
+        Text(state + " · " + android.text.format.Formatter.formatFileSize(context, row.size), style = MaterialTheme.typography.labelMedium)
+        if (row.state == "active" || row.state == "paused") {
+            LinearProgressIndicator(progress = { if (row.size == 0L) 0f else (row.offset.toDouble() / row.size).toFloat().coerceIn(0f,1f) }, modifier = Modifier.fillMaxWidth())
+            Text("${row.offset} / ${row.size} bytes", style = MaterialTheme.typography.labelSmall)
+        }
+        val actions = when (row.state) {
+            "offered" -> if (!row.outgoing) listOf("Accept" to "active", "Decline" to "declined") else emptyList()
+            "active" -> listOf("Pause" to "paused")
+            "paused" -> listOf("Resume" to "active")
+            "failed" -> listOf("Retry" to "active")
+            else -> emptyList()
+        }
+        Row { actions.forEach { (label, next) ->
+            TextButton(onClick = { scope.launch { files.action(row, next) } }) { Text(label) }
+        }
+            if (!row.outgoing && available) TextButton(onClick = { save.launch(row.name) }) { Text("Save a copy") }
+        }
+        if (problem) Text("Couldn’t save this copy. Choose another location.")
+    }
+}
+
+@Composable internal fun ShareScreen(peers: List<TrustedPeer>, files: Transfers) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var selected by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var recipients by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    var text by rememberSaveable { mutableStateOf("") }
+    var editingText by rememberSaveable { mutableStateOf(false) }
+    var jobs by rememberSaveable { mutableStateOf(false) }
+    var sending by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf("") }
+    val transfers by files.all.collectAsStateWithLifecycle(emptyList())
+    fun add(uris: List<Uri>) { selected = ArrayList((selected + uris.map(Uri::toString)).distinct()) }
+    val documents = rememberLauncherForActivityResult(OpenMultipleDocuments(), ::add)
+    val photos = rememberLauncherForActivityResult(PickMultipleVisualMedia(), ::add)
+    val contact = rememberLauncherForActivityResult(PickContact()) { uri ->
+        if (uri != null) scope.launch {
+            try {
+                val vcard = withContext(Dispatchers.IO) {
+                    val key = context.contentResolver.query(uri, arrayOf(ContactsContract.Contacts.LOOKUP_KEY), null, null, null)?.use {
+                        if (it.moveToFirst()) it.getString(0) else null
+                    }
+                    Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_VCARD_URI, Uri.encode(requireNotNull(key)))
+                }
+                add(listOf(vcard))
+            } catch (e: CancellationException) { throw e } catch (_: Exception) { error = "Couldn’t read this contact. Choose a vCard from Files." }
+        }
+    }
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(vertical = 12.dp)) {
+        item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(!jobs, { jobs = false }, { Text("Send") })
+            FilterChip(jobs, { jobs = true }, { Text("Transfers") })
+        } }
+        if (jobs) {
+            if (transfers.isEmpty()) item { Text("Your first transfer will appear here.") }
+            items(transfers, key = { it.peer + it.id + it.outgoing }) { row ->
+                Text((if (row.outgoing) "To " else "From ") + (peers.find { it.id == row.peer }?.let { peerLabel(it, peers) } ?: "Forgotten phone"))
+                TransferItem(row, files)
+                HorizontalDivider()
+            }
+        } else {
+            item { Text("What’s going over?", style = MaterialTheme.typography.headlineMedium) }
+            item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(enabled = !sending, onClick = { photos.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo)) }) { Text("Photos & videos") }
+                OutlinedButton(enabled = !sending, onClick = { documents.launch(arrayOf("*/*")) }) { Text("Files") }
+            } }
+            item { Row {
+                TextButton(enabled = !sending, onClick = { contact.launch(null) }) { Text("Contact") }
+                TextButton(enabled = !sending, onClick = { editingText = !editingText }) { Text("Text") }
+            } }
+            if (editingText || text.isNotEmpty()) item { OutlinedTextField(text, { text = it }, enabled = !sending, label = { Text("Shared text") }) }
+            items(selected, key = { it }) { uriValue ->
+                val title by produceState("Selected file", uriValue) {
+                    value = withContext(Dispatchers.IO) { runCatching {
+                        context.contentResolver.query(Uri.parse(uriValue), arrayOf("_display_name"), null, null, null)?.use {
+                            if (it.moveToFirst()) it.getString(0) else null
+                        }
+                    }.getOrNull() ?: "Selected file" }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, Modifier.weight(1f))
+                    TextButton(enabled = !sending, onClick = { selected = ArrayList(selected - uriValue) }) { Text("Remove") }
+                }
+            }
+            item { Text("Send to", style = MaterialTheme.typography.titleLarge) }
+            if (peers.isEmpty()) item { Text("Pair a phone in Nearby to share with it.") }
+            items(peers, key = { it.id }) { peer ->
+                val checked = peer.id in recipients
+                Row(Modifier.fillMaxWidth().toggleable(checked, enabled = !sending, role = Role.Checkbox) {
+                    recipients = ArrayList(if (it) recipients + peer.id else recipients - peer.id)
+                }.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked, null); Spacer(Modifier.width(12.dp)); Text(peerLabel(peer, peers))
+                }
+            }
+            item { Button(shape = RoundedCornerShape(18.dp), enabled = !sending && (selected.isNotEmpty() || text.isNotBlank()) &&
+                peers.any { it.id in recipients }, onClick = {
+                val targets = peers.filter { it.id in recipients }
+                sending = true
+                scope.launch {
+                    try {
+                        for (uri in selected.toList()) { files.add(targets, Uri.parse(uri)); selected = ArrayList(selected - uri) }
+                        if (text.isNotBlank()) { files.addText(targets, text); text = "" }
+                        jobs = true; error = ""
+                    } catch (e: CancellationException) { throw e }
+                    catch (_: Exception) { error = "Couldn’t prepare the file. Check free space and file access." }
+                    finally { sending = false }
+                }
+            }) { Text(if (sending) "Preparing…" else "Send") } }
+        }
+        if (error.isNotEmpty()) item { Text(error, color = MaterialTheme.colorScheme.error) }
+    }
+}

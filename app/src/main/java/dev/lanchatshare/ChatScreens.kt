@@ -82,6 +82,16 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     var error by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val scroll = rememberLazyListState()
+    val attachments by remember(peer.id, peer.pin) { trust.transfers.forPeer(peer) }.collectAsStateWithLifecycle(emptyList())
+    val byMessage = remember(attachments) { attachments.associateBy { it.id to it.outgoing } }
+    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) scope.launch {
+            busy = true
+            try { trust.transfers.add(listOf(peer), uri); error = false }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { error = true } finally { busy = false }
+        }
+    }
     val latest = history.lastOrNull()
     LaunchedEffect(peer.id, latest?.id, latest?.outgoing) {
         if (latest != null) scroll.scrollToItem(0)
@@ -100,9 +110,11 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
                     Column(Modifier.fillMaxWidth(.80f), horizontalAlignment = if (message.outgoing) Alignment.End else Alignment.Start) {
                         Surface(shape = RoundedCornerShape(20.dp, 20.dp, if (message.outgoing) 5.dp else 20.dp, if (message.outgoing) 20.dp else 5.dp),
                             color = if (message.outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer) {
-                            Text(message.text, Modifier.padding(horizontal = 14.dp, vertical = 9.dp))
+                            val transfer = byMessage[message.id to message.outgoing]
+                            if (message.attachment && transfer != null) TransferItem(transfer, trust.transfers, preview = true)
+                            else Text(message.text, Modifier.padding(horizontal = 14.dp, vertical = 9.dp))
                         }
-                        if (message.outgoing) Text(if (message.delivered) "Delivered" else "Queued", style = MaterialTheme.typography.labelSmall)
+                        if (message.outgoing && !message.attachment) Text(if (message.delivered) "Delivered" else "Queued", style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -110,6 +122,9 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
         if (error) Text("Couldn’t save the message. Try again.", color = MaterialTheme.colorScheme.error)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+            TextButton(enabled = !busy, onClick = {
+                photos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }) { Text("Photo") }
             OutlinedTextField(value = draft, onValueChange = { if (it.length <= 4096) draft = it }, modifier = Modifier.weight(1f),
                 label = { Text("Message") }, maxLines = 5, enabled = !busy, shape = RoundedCornerShape(18.dp))
             Button(enabled = draft.isNotBlank() && !busy, onClick = {
