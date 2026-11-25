@@ -25,6 +25,25 @@ The app stages a private copy before offering it. Interrupted downloads resume f
 3. Choose two phones, accept on one and decline on the other. Check their independent statuses. Repeat on a hotspot with mobile data off.
 4. Try an empty file, a file larger than 4 GiB where space permits, low storage and an APK. Check consent and recovery with notifications allowed and denied.
 
+## Background operation and notifications
+
+Under Settings → Notifications and reachability, **Stay reachable** keeps the authenticated LAN listener running while the app is closed. With it off, leaving the app stops the listener after active connected transfers finish. There is no push service. If Android kills or force-stops the service, peers queue messages locally until you reconnect. Open the app to restart it after a force-stop.
+
+Allow notifications to see Messages, File requests, Transfers and Connection status. Reply or mark a conversation as read from a message alert. Opening the conversation clears its alert. Quiet hours use the phone's local time. Preview and lock-screen controls are in the same settings screen. Android's channel settings and Do Not Disturb also apply.
+
+Settings → Diagnostics shows whether notifications, Wi-Fi, Bluetooth and the listener are available and whether battery optimization is active. If screen-off transfers pause, review the app's battery settings. Samsung has sleeping-app lists, Xiaomi has app battery saver and background autostart, Oppo and OnePlus have app battery usage controls, and Vivo has background power management. Names vary by model. Opening battery settings is optional.
+
+LanChatShare uses the connected-device foreground service for communication with another phone. On Android 14 and newer it declares the service type, its permission and the qualifying Wi-Fi permission. Android 15's six-hour background budget applies to dataSync and mediaProcessing. During file I/O the app requests a partial CPU wake lock and a Wi-Fi lock. Android 14 and newer map high-performance Wi-Fi locks to low-latency mode, which has foreground and screen-on restrictions. Android and OEM power policies can still reduce speed or interrupt the LAN. [Foreground service types](https://developer.android.com/develop/background-work/services/fgs/service-types) · [Android 15 timeouts](https://developer.android.com/develop/background-work/services/fgs/timeout) · [Wi-Fi lock restrictions](https://developer.android.com/reference/android/net/wifi/WifiManager#WIFI_MODE_FULL_HIGH_PERF)
+
+### Two-phone acceptance checklist
+
+- Install the update over both existing installations. On Android 13+, allow alerts on one phone and deny them on the other. Verify the settings link can enable them later.
+- Send messages while the recipient is in that conversation, in a different chat, on the home screen, locked and after swiping the app from Recents. Check sender identity, preview privacy, quiet hours, inline reply, Mark as read and tap-to-open. Switch Stay reachable off and on. Force-stop separately and check queued delivery after reopening.
+- Send 1 MB, 30 MB, 100 MB and 1 GB files in both directions. Compare SHA-256 after export. Record devices, OS, Wi-Fi band, file size and elapsed time. Use both router Wi-Fi and a hotspot.
+- During a sufficiently long transfer lock only the sender, only the receiver, then both. Repeat for 5 and 15 minutes. Record the last offset before locking, the next offset or completion after waking, elapsed time and checksum. Repeat after swiping away the app and after toggling Wi-Fi. Check Diagnostics and repeat with the battery exception if the OEM suspends the app.
+- Test low storage, pause, cancellation from either phone and file-request Accept/Decline. Verify ongoing transfer notifications clear and CPU and Wi-Fi locks release after completion or interruption.
+- For the later motion and theme checkpoints, repeat in both light and dark mode, with large fonts and reduced motion.
+
 ## Build
 
 Open the root folder in Android Studio with JDK 17 or later, Android SDK Platform 37.1, and a configured Android SDK location. On Windows run `./gradlew.bat :app:assembleDebug :core:data:testDebugUnitTest :app:lintDebug`. On macOS or Linux use `./gradlew`. The debug APK is generated under `app/build/outputs/apk/debug`. The build downloads dependencies. The installed app works offline. Nearby explains the Bluetooth permissions when opened.

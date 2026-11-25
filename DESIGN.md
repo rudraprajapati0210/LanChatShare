@@ -18,6 +18,8 @@ Use a flat conversation list with an initials avatar, name, last message, time a
 
 ## Share
 
+Background controls live in Settings under Notifications and reachability. Put the explanation next to the control. Show one alert per conversation, with the peer's name and avatar. Offer Reply and Mark as read directly. Keep transfer progress quiet and file requests actionable. Diagnostics describes observed device states in plain language. The first active transfer can surface the optional battery guidance once.
+
 Lay out the flow in reading order. Start with a file picker, follow with an editable selection summary, then recipients by name and one Send action. A broad recipient shape contracts into a progress indicator after acceptance. Show verified bytes and total beside progress. Pause, resume and retry retain the recipient and selection. Queue and completed rows stay still. “Waiting for Rudra” and “Rudra declined” identify the person and state. A static bar substitutes for the wave under reduced motion.
 
 ## Nearby, Library and Settings
