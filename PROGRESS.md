@@ -1,6 +1,14 @@
 # LanChatShare progress
 
-## Current checkpoint
+## Current checkpoint — one-to-one chat
+
+The debug app sends durable messages and delivery receipts over mutually authenticated Netty/CIO WebSockets. Updating both phones preserves the Bluetooth identity and existing Room pins. Weekly TLS keys have a separate purpose from pairing keys. Nearby can revoke a peer, end its sessions and remove queued outgoing messages while retaining delivered history.
+
+The initial audit built successfully and passed nine existing JVM tests and the previous two-identity Android test. The completed binding adds four JVM tests for rotation, unknown identity, tampering and time validity. Android coverage exercises queued text, a reply, both receipts, rejection before WebSocket upgrade, onboarding and conversation navigation. The transport test uses two identities and independent databases on a single API 37 emulator with Android Keystore transport keys at both ends. All 13 JVM and seven Android tests passed. Android Lint finished with zero errors and three warnings (an unused trust manager in the Bouncy Castle dependency, launcher resource configuration and wordmark path length).
+
+Next checkpoint is physical Wi-Fi and hotspot reliability. Run the two-phone README checklist on a shared router and with each phone as host, then repeat with a second client leaving and rejoining. Share transfers, Library categorization and release hardening remain open.
+
+## Previous Bluetooth checkpoint
 
 Milestone B implementation and automated checks are complete. Two-phone radio acceptance is pending. Milestones C through F remain unstarted and G is partially implemented. Stop here before Wi-Fi transport.
 
