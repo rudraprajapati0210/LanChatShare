@@ -1,5 +1,7 @@
 # LanChatShare progress
 
+The JVM codec regression streamed 2 GiB plus one byte from a sparse file, verified every CRC frame, and matched the independently calculated SHA-256 across the signed 32-bit boundary. It retains a single response window at a time. This exercises the codec and offsets only. Measuring Android process memory over a complete 2 GB transfer remains open.
+
 ## Range integrity and chat latency
 
 New peers negotiate CRC32-framed binary ranges over authenticated HTTP. Each block is checked before writing, the verified prefix is synced before Room advances, and final SHA-256 gates publication. Existing peers still use raw ranges and final SHA-256. Ten seconds of idle network input moves a download to the visible reconnecting state. The foreground transfer job retries from disk. Unit tests cover damaged and truncated frames, continuing progress and idle timeout.
