@@ -21,6 +21,8 @@ data class TrustedPeer(@PrimaryKey val id: String, val name: String, val colour:
     suspend fun find(id: String): TrustedPeer?
     @Query("UPDATE trusted_peers SET name = :name, colour = :colour WHERE id = :id AND pin = :pin AND (name != :name OR colour != :colour)")
     suspend fun updateProfile(id: String, pin: String, name: String, colour: Int)
+    @Query("DELETE FROM trusted_peers WHERE id = :id AND pin = :pin")
+    suspend fun forget(id: String, pin: String): Int
     @Upsert suspend fun save(peer: TrustedPeer)
 }
 @Database(entities = [TrustedPeer::class, ChatMessage::class], version = 3, autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)])
@@ -35,9 +37,24 @@ class TrustStore(context: Context, databaseName: String = "peers.db") {
     internal val messages = database.messages()
     val latest = messages.latest()
     fun conversation(id: String) = messages.conversation(id)
-    suspend fun enqueue(peer: String, text: String) {
+    suspend fun enqueue(peer: String, text: String): Unit = database.withTransaction {
         require(text.isNotBlank() && text.length <= 4096 && dao.pin(peer) != null)
         messages.insert(ChatMessage(peer, true, java.util.UUID.randomUUID().toString(), text.trim(), System.currentTimeMillis(), false))
+    }
+    internal suspend fun saveIncoming(peer: TrustedPeer, message: ChatMessage) = database.withTransaction {
+        check(dao.pin(peer.id) == peer.pin)
+        messages.insert(message)
+    }
+    suspend fun forget(peer: TrustedPeer) {
+        database.withTransaction {
+            if (dao.forget(peer.id, peer.pin) == 1) {
+                messages.deletePending(peer.id)
+                synchronized(this@TrustStore) {
+                    tickets.remove(peer.id)
+                    hints.value = hints.value - peer.id
+                }
+            }
+        }
     }
     val peers = dao.observe()
     internal val hints = kotlinx.coroutines.flow.MutableStateFlow<Map<String, List<WifiEndpoint>>>(emptyMap())

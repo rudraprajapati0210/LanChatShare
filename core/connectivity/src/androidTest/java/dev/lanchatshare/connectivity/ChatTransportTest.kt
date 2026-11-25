@@ -28,7 +28,10 @@ class ChatTransportTest {
         val rootA = certificate(name, name, keysA.public, keysA.private, now - 60000, now + TLS_PERIOD, null, true)
         fun rsa() = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
         val aTls = certify(a.id, keysA.private, rootA, rsa(), rsa(), now)
-        val server = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls) { mapOf(a.id to pin(keysA.public)) }) {
+        val trusted = java.util.concurrent.atomic.AtomicReference(mapOf(a.id to pin(keysA.public)))
+        val upgrades = java.util.concurrent.atomic.AtomicInteger()
+        val server = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls, trusted::get)) {
+            upgrades.incrementAndGet()
             chat(authenticateIncoming(b.id, recipient), recipient, flowOf(b))
         }
         try {
@@ -62,6 +65,18 @@ class ChatTransportTest {
                     }
                 } finally { session.cancelAndJoin() }
             }
+            assertEquals(1, upgrades.get())
+            recipient.enqueue(a.id, "Still queued")
+            recipient.forget(recipient.dao.find(a.id)!!)
+            trusted.set(recipient.peers.first().associate { it.id to it.pin })
+            assertNull(recipient.dao.pin(a.id))
+            assertEquals(2, recipient.conversation(a.id).first().size)
+            chatClient(peerB, aTls).use { client ->
+                val failure = runCatching { withTimeout(10000) { client.webSocket(urlString = url) {} } }.exceptionOrNull()
+                assertNotNull(failure)
+                assertFalse(failure is TimeoutCancellationException)
+            }
+            assertEquals(1, upgrades.get())
         } finally {
             server.stop(0, 1000); sender.close(); recipient.close()
             context.deleteDatabase(a.id); context.deleteDatabase(b.id)

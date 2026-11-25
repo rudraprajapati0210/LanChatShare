@@ -84,7 +84,7 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
             when (event.type) {
                 "text" -> {
                     require(UUID.fromString(event.id).toString() == event.id && event.text.isNotBlank() && event.text.length <= 4096)
-                    trust.messages.insert(ChatMessage(peer.id, false, event.id, event.text, System.currentTimeMillis(), true))
+                    trust.saveIncoming(peer, ChatMessage(peer.id, false, event.id, event.text, System.currentTimeMillis(), true))
                     ws.write(ChatFrame("ack", id = event.id))
                 }
                 "ack" -> trust.messages.acknowledge(peer.id, event.id)

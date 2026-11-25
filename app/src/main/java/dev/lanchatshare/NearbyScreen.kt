@@ -1,5 +1,6 @@
 package dev.lanchatshare
 
+import kotlinx.coroutines.launch
 import android.Manifest.permission.*
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
@@ -73,6 +74,9 @@ import dev.lanchatshare.data.Profile
     LaunchedEffect(state.status, foreground) {
         if (allowed && !hasPermissions()) refresh++
     }
+    val scope = rememberCoroutineScope()
+    var forgetting by remember { mutableStateOf<TrustedPeer?>(null) }
+    var forgetError by remember { mutableStateOf(false) }
     val trusted by trust.peers.collectAsStateWithLifecycle(emptyList())
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -100,11 +104,29 @@ import dev.lanchatshare.data.Profile
         }
         if (trusted.isNotEmpty()) item { Text("Trusted devices", style = MaterialTheme.typography.titleMedium) }
         items(trusted, key = { it.id }) { peer ->
-            OutlinedButton(onClick = { openChat(peer) }) {
-                Text("Chat with " + peerLabel(peer, trusted))
+            Row {
+                OutlinedButton(onClick = { openChat(peer) }, modifier = Modifier.weight(1f)) {
+                    Text("Chat with " + peerLabel(peer, trusted))
+                }
+                TextButton(onClick = { forgetting = peer }) { Text("Forget") }
             }
         }
     }
+    forgetting?.let { peer ->
+        AlertDialog(onDismissRequest = { forgetting = null },
+            title = { Text("Forget " + peerLabel(peer, trusted) + "?") },
+            text = { Text("Unsent messages will be removed. Delivered messages stay on this phone. Pair again to chat.") },
+            confirmButton = { TextButton(onClick = {
+                forgetting = null
+                scope.launch {
+                    try { trust.forget(peer) } catch (_: android.database.SQLException) { forgetError = true }
+                }
+            }) { Text("Forget device") } },
+            dismissButton = { TextButton(onClick = { forgetting = null }) { Text("Cancel") } })
+    }
+    if (forgetError) AlertDialog(onDismissRequest = { forgetError = false },
+        title = { Text("Couldn’t forget this phone") }, text = { Text("Try again from Nearby.") },
+        confirmButton = { TextButton(onClick = { forgetError = false }) { Text("OK") } })
     state.prompt?.let { prompt ->
         AlertDialog(onDismissRequest = { radio?.answer(false) },
             title = { Text(if (prompt.changed) "Device key changed" else "Compare both phones") },

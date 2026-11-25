@@ -10,6 +10,9 @@ data class ChatMessage(val peerId: String, val outgoing: Boolean, val id: String
 
 @Dao
 internal interface MessageDao {
+    @Query("DELETE FROM messages WHERE peerId = :peer AND outgoing = 1 AND delivered = 0")
+    suspend fun deletePending(peer: String)
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(message: ChatMessage): Long
 
