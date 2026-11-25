@@ -16,44 +16,43 @@ import java.security.spec.ECGenParameterSpec
 import java.util.*
 import javax.net.ssl.*
 
-private const val TLS_ALIAS = "lanchatshare.lan.tls.v1"
+private const val TLS_ALIAS = "lanchatshare.transport."
 
-internal fun verifyServerChain(chain: Array<X509Certificate>, expectedPin: String) {
-    if (chain.size != 2) throw CertificateException("Missing paired identity")
-    val (leaf, identity) = chain
-    if (Base64.getEncoder().encodeToString(digest(identity.publicKey.encoded)) != expectedPin)
-        throw CertificateException("Peer identity changed")
-    leaf.checkValidity()
-    leaf.verify(identity.publicKey)
+@Synchronized internal fun deviceCredentials(id: String, now: Long = System.currentTimeMillis()): Credentials {
+    val pairing = identityKeys()
+    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+    val prefix = TLS_ALIAS + now / TLS_PERIOD + "."
+    fun key(role: String): KeyPair {
+        val alias = prefix + role
+        if (!store.containsAlias(alias)) {
+            val spec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY)
+                .setKeySize(2048).setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1, KeyProperties.SIGNATURE_PADDING_RSA_PSS)
+                .setDigests(KeyProperties.DIGEST_NONE, KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA384, KeyProperties.DIGEST_SHA512).build()
+            KeyPairGenerator.getInstance("RSA", "AndroidKeyStore").apply { initialize(spec); generateKeyPair() }
+        }
+        return KeyPair(store.getCertificate(alias).publicKey, store.getKey(alias, null) as PrivateKey)
+    }
+    val result = certify(id, pairing.private, store.getCertificate(IDENTITY_ALIAS) as X509Certificate, key("issuer"), key("tls"), now)
+    store.aliases().toList().filter { it.startsWith(TLS_ALIAS) && !it.startsWith(prefix) }.forEach(store::deleteEntry)
+    return result
 }
 
-@Synchronized internal fun serverTls(): SSLContext {
-    val identity = identityKeys()
-    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-    if (!store.containsAlias(TLS_ALIAS)) {
-        // Conscrypt signs a pre-hashed handshake. Existing pairing keys only authorize SHA-256.
-        val spec = KeyGenParameterSpec.Builder(TLS_ALIAS, KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY)
-            .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
-            .setDigests(KeyProperties.DIGEST_NONE, KeyProperties.DIGEST_SHA256).build()
-        KeyPairGenerator.getInstance("EC", "AndroidKeyStore").apply { initialize(spec); generateKeyPair() }
-    }
-    val key = store.getKey(TLS_ALIAS, null) as PrivateKey
-    val public = store.getCertificate(TLS_ALIAS).publicKey
-    val root = store.getCertificate(IDENTITY_ALIAS) as X509Certificate
-    val now = System.currentTimeMillis()
-    val builder = X509v3CertificateBuilder(X500Name.getInstance(root.subjectX500Principal.encoded),
-        BigInteger(128, SecureRandom()).setBit(0), Date(now - 86400000L), Date(now + 90L * 86400000L),
-        X500Name("CN=LanChatShare"), SubjectPublicKeyInfo.getInstance(public.encoded))
-    val der = builder.build(JcaContentSignerBuilder("SHA256withECDSA").build(identity.private)).encoded
-    val leaf = CertificateFactory.getInstance("X.509").generateCertificate(der.inputStream()) as X509Certificate
+internal fun serverTls(credentials: Credentials, trusted: () -> Map<String,String>): SSLContext {
+    val key = credentials.key
     val keys = object : X509ExtendedKeyManager() {
         override fun getPrivateKey(alias: String?) = if (alias == TLS_ALIAS) key else null
-        override fun getCertificateChain(alias: String?) = if (alias == TLS_ALIAS) arrayOf(leaf, root) else null
-        override fun chooseEngineServerAlias(type: String?, issuers: Array<out Principal>?, engine: SSLEngine?) = TLS_ALIAS.takeIf { type == "EC" }
-        override fun chooseServerAlias(type: String?, issuers: Array<out Principal>?, socket: Socket?) = TLS_ALIAS.takeIf { type == "EC" }
-        override fun getServerAliases(type: String?, issuers: Array<out Principal>?) = arrayOf(TLS_ALIAS).takeIf { type == "EC" }
+        override fun getCertificateChain(alias: String?) = if (alias == TLS_ALIAS) credentials.chain else null
+        override fun chooseEngineServerAlias(type: String?, issuers: Array<out Principal>?, engine: SSLEngine?) = TLS_ALIAS.takeIf { type == "RSA" }
+        override fun chooseServerAlias(type: String?, issuers: Array<out Principal>?, socket: Socket?) = TLS_ALIAS.takeIf { type == "RSA" }
+        override fun getServerAliases(type: String?, issuers: Array<out Principal>?) = arrayOf(TLS_ALIAS).takeIf { type == "RSA" }
         override fun getClientAliases(type: String?, issuers: Array<out Principal>?): Array<String>? = null
         override fun chooseClientAlias(types: Array<out String>?, issuers: Array<out Principal>?, socket: Socket?): String? = null
     }
-    return SSLContext.getInstance("TLS").apply { init(arrayOf(keys), null, null) }
+    val peers = object : X509TrustManager {
+        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+        override fun checkClientTrusted(chain: Array<X509Certificate>, auth: String) { verifyBinding(chain, trusted()) }
+        override fun checkServerTrusted(chain: Array<X509Certificate>, auth: String) { throw CertificateException("Server-only context") }
+    }
+    return SSLContext.getInstance("TLS").apply { init(arrayOf(keys), arrayOf(peers), null) }
 }
+

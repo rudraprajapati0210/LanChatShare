@@ -12,6 +12,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.Netty
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
+import io.ktor.network.tls.addCertificateChain
 import io.ktor.websocket.WebSocketSession
 import io.netty.handler.ssl.SslHandler
 import kotlinx.coroutines.*
@@ -27,17 +28,19 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.*
 import kotlin.time.Duration.Companion.seconds
 
-internal fun chatClient(pin: String) = HttpClient(CIO) {
+internal fun chatClient(peer: TrustedPeer, local: Credentials) = HttpClient(CIO) {
     followRedirects = false
     engine {
         proxy = null
         endpoint { connectTimeout = 4500; connectAttempts = 1 }
         https {
+            serverName = deviceHost(peer.id)
+            addCertificateChain(local.chain, local.key)
             trustManager = object : X509TrustManager {
                 override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
                 override fun checkClientTrusted(chain: Array<X509Certificate>, auth: String) { throw CertificateException() }
                 override fun checkServerTrusted(chain: Array<X509Certificate>, auth: String) {
-                    verifyServerChain(chain, pin)
+                    verifyBinding(chain, mapOf(peer.id to peer.pin))
                 }
             }
         }
@@ -54,6 +57,7 @@ internal fun chatServer(hosts: List<String>, port: Int, tls: SSLContext, session
             // Let Android's TLS provider sign with the non-exportable pairing key.
             val engine = tls.createSSLEngine().apply {
                 useClientMode = false
+                needClientAuth = true
                 enabledProtocols = supportedProtocols.filter { it == "TLSv1.2" || it == "TLSv1.3" }.toTypedArray()
             }
             addFirst("deviceTls", SslHandler(engine))
@@ -76,13 +80,17 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
 
     suspend fun run(): Unit = withContext(Dispatchers.IO) {
         val local = profile.first()
-        val tls = serverTls()
+        val pins = trust.peers.map { rows -> rows.associate { it.id to it.pin } }.distinctUntilChanged()
         flow {
-            while (currentCoroutineContext().isActive) { emit(lanLinks(context)); delay(3000) }
-        }.distinctUntilChanged().collectLatest { links ->
+            while (currentCoroutineContext().isActive) { emit(lanLinks(context) to System.currentTimeMillis() / TLS_PERIOD); delay(3000) }
+        }.distinctUntilChanged().combine(pins) { route, peers -> route to peers }.collectLatest { (route, peers) ->
+            val links = route.first
+            if (peers.isEmpty()) return@collectLatest
+            val credentials = deviceCredentials(local.id)
+            val tls = serverTls(credentials) { peers }
             if (links.isEmpty()) { status.value = "Join Wi-Fi or turn on a phone hotspot."; return@collectLatest }
             while (currentCoroutineContext().isActive) {
-                try { network(local, links, tls) }
+                try { network(local, links, tls, credentials) }
                 catch (e: CancellationException) { throw e }
                 catch (e: Exception) {
                     android.util.Log.w("LanChatShare", "LAN listener unavailable", e)
@@ -93,7 +101,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         }
     }
 
-    private suspend fun network(local: Profile, links: List<LanLink>, tls: SSLContext): Unit = coroutineScope {
+    private suspend fun network(local: Profile, links: List<LanLink>, tls: SSLContext, credentials: Credentials): Unit = coroutineScope {
         val seen = ConcurrentHashMap<String, Seen>()
         val peers = trust.peers.stateIn(this, SharingStarted.Eagerly, emptyList())
         val pending = ConcurrentHashMap.newKeySet<String>()
@@ -128,7 +136,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                                 else ip.hostAddress
                                 val literal = if (ip is Inet6Address) "[" + host?.replace("%", "%25") + "]" else host
                                 try {
-                                    chatClient(peer.pin).use { client ->
+                                    chatClient(peer, credentials).use { client ->
                                         client.webSocket(urlString = "wss://$literal:$port/v1/chat") {
                                             withTimeout(10000) {
                                                 val token = trust.pendingToken(peer.id)
@@ -169,5 +177,6 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         try { socket.chat(peer, trust, profile) } finally { change(-1) }
     }
 }
+
 
 

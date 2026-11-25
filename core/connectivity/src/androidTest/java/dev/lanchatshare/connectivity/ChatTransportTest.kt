@@ -22,7 +22,13 @@ class ChatTransportTest {
         val keysA = KeyPairGenerator.getInstance("EC").apply { initialize(256) }.generateKeyPair()
         fun pin(key: java.security.PublicKey) = Base64.getEncoder().encodeToString(digest(key.encoded))
         val peerB = TrustedPeer(b.id, b.name, 2, pin(identityKeys().public))
-        val server = chatServer(listOf("127.0.0.1"), 0, serverTls()) {
+        val bTls = deviceCredentials(b.id)
+        val name = org.bouncycastle.asn1.x500.X500Name("CN=older-pairing-key")
+        val now = System.currentTimeMillis()
+        val rootA = certificate(name, name, keysA.public, keysA.private, now - 60000, now + TLS_PERIOD, null, true)
+        fun rsa() = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
+        val aTls = certify(a.id, keysA.private, rootA, rsa(), rsa(), now)
+        val server = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls) { mapOf(a.id to pin(keysA.public)) }) {
             chat(authenticateIncoming(b.id, recipient), recipient, flowOf(b))
         }
         try {
@@ -33,13 +39,13 @@ class ChatTransportTest {
             server.start(false)
             val port = server.engine.resolvedConnectors().first().port
             val url = "wss://127.0.0.1:$port/v1/chat"
-            val wrongPin = chatClient(pin(keysA.public))
+            val wrongPin = chatClient(peerB.copy(pin = pin(keysA.public)), aTls)
             try {
                 val attempt = runCatching { withTimeout(10000) { wrongPin.webSocket(urlString = url) { error("reached endpoint") } } }
                 assertTrue(attempt.isFailure)
                 assertNotEquals("reached endpoint", attempt.exceptionOrNull()?.message)
             } finally { wrongPin.close() }
-            chatClient(peerB.pin).use { client ->
+            chatClient(peerB, aTls).use { client ->
                 val session = launch(Dispatchers.IO) {
                     client.webSocket(urlString = url) {
                         authenticateOutgoing(a.id, peerB, keysA, null)
@@ -63,3 +69,4 @@ class ChatTransportTest {
         Unit
     }
 }
+
