@@ -1,5 +1,9 @@
 # LanChatShare progress
 
+## Direct-link comparison
+
+README documents a two-phone router/hotspot comparison, Android permission and radio limits, and the proposed authenticated upgrade and fallback. Automatic Turbo is pending results from physical phones. The active engineering task is verifying framed ranges, interrupted downloads and concurrent chat latency.
+
 ## Two-emulator transfer baseline
 
 Recovery audit: the original pending app built and the existing JVM tests passed. No explicit source TODOs were found. The Library remains a placeholder and the fallback screen contains obsolete milestone-E copy. The Diagnostics benchmark now queues selectable 10/100/1000 MB files, records sampled local throughput, link metadata, screen state, stalls and CPU time, and exports or copies a JSON report. Wi-Fi client telemetry cannot distinguish a router from another phone's hotspot. Next: validate the benchmark screen, then compare the windowed range experiment with the recorded baseline.
