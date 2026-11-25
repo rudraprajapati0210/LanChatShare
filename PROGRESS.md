@@ -4,6 +4,10 @@
 
 Bug 4 reproduced on API 37 with notifications granted. The baseline saved the incoming text but posted only the connection notification. The updated build posts MessagingStyle alerts and the Mark as read regression passes. Room v5 treats existing messages as read on upgrade. Notification controls, inline reply, deep links, file decisions and transfer progress actions are in place. Next is screen-off transfer scheduling and power management.
 
+Bug 2 reproduced by stopping the original scheduled worker after it started reading. This cancelled the socket job and stranded the live grant. Forced idle alone did not reproduce the stall on the emulator. The service now owns the transfer, and WorkManager signals retries. Both HTTP range serving and receiving contribute to active-I/O accounting. CPU and Wi-Fi leases follow that activity and release on idle or cancellation. Added one-time battery guidance and Settings → Diagnostics.
+
+Step 1 automated checks passed on API 37, including the stopped-worker regression, forced-idle scheduling, CPU lease release, inline Reply, Mark as read and encrypted range transfer. No physical phones were attached. Sender-only, receiver-only and simultaneous lock tests at 5 and 15 minutes remain open, including throughput and checksum comparison. Next engineering step is recording the original transfer-speed baseline on two phones before changing the range protocol for bugs 1 and 3. The README contains the phase acceptance checklist.
+
 ## Current checkpoint — Share and inline photos
 
 The user confirmed physical verification of chat and Wi-Fi/hotspot operation. Milestone E adds auto-scroll, photo sharing in conversations, inline previews, a multi-recipient Share hub and a transfer journal. Room v4 preserves existing messages and peers. Consent and receipts travel over chat. File contents use authenticated HTTPS ranges and SHA-256 verification. The sender stages one immutable copy across recipients.

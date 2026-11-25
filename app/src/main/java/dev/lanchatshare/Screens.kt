@@ -105,6 +105,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                 }
                 if (trusted.isNotEmpty()) {
                     ChatAccess()
+                    FirstTransferBatteryHelp(trust.transfers)
                     if (page == "Chats") NotificationAccess()
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) {

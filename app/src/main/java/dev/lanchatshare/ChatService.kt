@@ -21,17 +21,16 @@ class ChatService : Service() {
         super.onCreate()
         channels()
         val channel = "local_chat"
-        getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(channel, "LAN connection", NotificationManager.IMPORTANCE_LOW))
         val launch = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         startForeground(31, Notification.Builder(this, channel).setSmallIcon(R.drawable.nav_chat)
             .setContentTitle("LanChatShare").setContentText("Available for local chats")
             .setContentIntent(launch).setOngoing(true).build())
         running.value = true
+        scope.launch { holdTransferPower(trust.transfers.activeOperations) }
         scope.launch {
-            kotlinx.coroutines.flow.combine(alerts,foreground,trust.transfers.all) { opts, visible, rows ->
-                !opts.reachable && !visible && rows.none { it.state == "active" }
+            kotlinx.coroutines.flow.combine(alerts,foreground,trust.transfers.all,chat.online) { opts, visible, rows, online ->
+                !opts.reachable && !visible && rows.none { it.state == "active" && it.peer in online }
             }.collect { if (it) stopSelf() }
         }
         scope.launch { observeTexts(trust) }

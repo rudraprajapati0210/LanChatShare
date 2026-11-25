@@ -25,15 +25,17 @@ internal fun Route.fileRanges(files: Transfers) {
         if (start < 0 || end < start || end >= row.size || end - start >= RANGE_BLOCK) {
             call.respond(HttpStatusCode.RequestedRangeNotSatisfiable); return@get
         }
-        val bytes = withContext(Dispatchers.IO) {
-            RandomAccessFile(files.file(row), "r").use { file ->
-                file.seek(start)
-                ByteArray((end - start + 1).toInt()).also(file::readFully)
+        files.duringTransfer {
+            val bytes = withContext(Dispatchers.IO) {
+                RandomAccessFile(files.file(row), "r").use { file ->
+                    file.seek(start)
+                    ByteArray((end - start + 1).toInt()).also(file::readFully)
+                }
             }
+            call.response.headers.append(HttpHeaders.ContentRange, "bytes $start-$end/${row.size}")
+            call.respondBytes(bytes, ContentType.Application.OctetStream, HttpStatusCode.PartialContent)
+            files.dao.progress(row.peer, true, row.id, end + 1)
         }
-        call.response.headers.append(HttpHeaders.ContentRange, "bytes $start-$end/${row.size}")
-        call.respondBytes(bytes, ContentType.Application.OctetStream, HttpStatusCode.PartialContent)
-        files.dao.progress(row.peer, true, row.id, end + 1)
     }
 }
 
@@ -41,55 +43,57 @@ internal suspend fun Transfers.receive(row: Transfer, client: HttpClient, origin
     val lock = downloadLock[(row.id.hashCode() and Int.MAX_VALUE) % downloadLock.size]
     lock.lock()
     try {
-        val target = file(row)
-        target.parentFile!!.mkdirs()
-        val part = File(target.path + ".partial")
-        suspend fun active() = dao.get(row.peer, false, row.id)?.let { it.pin == row.pin && it.state == "active" } == true
-        if (!active()) return@withContext true
-        if (!target.exists()) {
-            RandomAccessFile(part, "rw").use { out ->
-                val durable = dao.get(row.peer, false, row.id)?.offset ?: return@withContext true
-                val present = minOf(out.length(), durable, row.size)
-                var start = if (present == row.size) present else present - present % RANGE_BLOCK
-                if (out.length() != start) out.setLength(start)
-                if (durable != start) dao.checkpoint(row.peer, row.id, start)
-                if (row.size - start > target.parentFile!!.usableSpace) {
-                    dao.change(row.peer, false, row.id, "active", "storage")
-                    return@withContext true
-                }
-                while (start < row.size && active()) {
-                    val end = start + minOf(row.size - start, RANGE_BLOCK.toLong()) - 1
-                    val bytes = try {
-                        withTimeout(30000) {
-                            client.prepareGet("$origin/v1/files/${row.id}") {
-                                header(HttpHeaders.Authorization, "Bearer $token")
-                                header(HttpHeaders.Range, "bytes=$start-$end")
-                            }.execute { response ->
-                                if (response.status == HttpStatusCode.Forbidden) return@execute null
-                                check(response.status == HttpStatusCode.PartialContent &&
-                                    response.headers[HttpHeaders.ContentRange] == "bytes $start-$end/${row.size}" &&
-                                    response.headers[HttpHeaders.ContentLength]?.toLongOrNull() == end - start + 1)
-                                ByteArray((end - start + 1).toInt()).also { response.bodyAsChannel().readFully(it) }
+        duringTransfer {
+            val target = file(row)
+            target.parentFile!!.mkdirs()
+            val part = File(target.path + ".partial")
+            suspend fun active() = dao.get(row.peer, false, row.id)?.let { it.pin == row.pin && it.state == "active" } == true
+            if (!active()) return@duringTransfer true
+            if (!target.exists()) {
+                RandomAccessFile(part, "rw").use { out ->
+                    val durable = dao.get(row.peer, false, row.id)?.offset ?: return@duringTransfer true
+                    val present = minOf(out.length(), durable, row.size)
+                    var start = if (present == row.size) present else present - present % RANGE_BLOCK
+                    if (out.length() != start) out.setLength(start)
+                    if (durable != start) dao.checkpoint(row.peer, row.id, start)
+                    if (row.size - start > target.parentFile!!.usableSpace) {
+                        dao.change(row.peer, false, row.id, "active", "storage")
+                        return@duringTransfer true
+                    }
+                    while (start < row.size && active()) {
+                        val end = start + minOf(row.size - start, RANGE_BLOCK.toLong()) - 1
+                        val bytes = try {
+                            withTimeout(30000) {
+                                client.prepareGet("$origin/v1/files/${row.id}") {
+                                    header(HttpHeaders.Authorization, "Bearer $token")
+                                    header(HttpHeaders.Range, "bytes=$start-$end")
+                                }.execute { response ->
+                                    if (response.status == HttpStatusCode.Forbidden) return@execute null
+                                    check(response.status == HttpStatusCode.PartialContent &&
+                                        response.headers[HttpHeaders.ContentRange] == "bytes $start-$end/${row.size}" &&
+                                        response.headers[HttpHeaders.ContentLength]?.toLongOrNull() == end - start + 1)
+                                    ByteArray((end - start + 1).toInt()).also { response.bodyAsChannel().readFully(it) }
+                                }
                             }
-                        }
-                    } catch (_: java.io.IOException) { return@withContext false }
-                    if (bytes == null) return@withContext true
-                    out.seek(start); out.write(bytes); out.fd.sync()
-                    start = end + 1
-                    dao.progress(row.peer, false, row.id, start)
+                        } catch (_: java.io.IOException) { return@duringTransfer false }
+                        if (bytes == null) return@duringTransfer true
+                        out.seek(start); out.write(bytes); out.fd.sync()
+                        start = end + 1
+                        dao.progress(row.peer, false, row.id, start)
+                    }
                 }
+                if (!active()) return@duringTransfer true
+                if (part.length() != row.size || fileHash(part.inputStream()) != row.hash) {
+                    part.delete()
+                    dao.checkpoint(row.peer, row.id, 0)
+                    dao.change(row.peer, false, row.id, "active", "invalid")
+                    return@duringTransfer true
+                }
+                check(part.renameTo(target))
             }
-            if (!active()) return@withContext true
-            if (part.length() != row.size || fileHash(part.inputStream()) != row.hash) {
-                part.delete()
-                dao.checkpoint(row.peer, row.id, 0)
-                dao.change(row.peer, false, row.id, "active", "invalid")
-                return@withContext true
-            }
-            check(part.renameTo(target))
+            dao.change(row.peer, false, row.id, "active", "done")
+            true
         }
-        dao.change(row.peer, false, row.id, "active", "done")
-        true
     } catch (e: CancellationException) {
         if (!currentCoroutineContext().isActive) throw e
         false

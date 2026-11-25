@@ -12,36 +12,33 @@ class TransferWorker(context: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val key = inputData.getString("transfer") ?: return Result.failure()
         // A fresh grant schedules a successor after process death or a network change.
-        val grant = grants[key] ?: return Result.success()
-        val read = grant.scope.async { grant.download() }
-        return try {
-            if (read.await()) {
-                grant.finished.complete(Unit)
-                Result.success()
-            } else Result.retry()
-        } catch (e: CancellationException) {
-            currentCoroutineContext().ensureActive()
-            Result.success()
-        } finally { read.cancel() }
+        retries[key]?.complete(Unit)
+        return Result.success()
     }
 
     companion object {
-        private class Grant(val scope: CoroutineScope, val download: suspend () -> Boolean,
-            val finished: CompletableDeferred<Unit> = CompletableDeferred())
-        private val grants = ConcurrentHashMap<String, Grant>()
+        private val retries = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
 
         suspend fun queue(context: Context, row: Transfer, download: suspend () -> Boolean): Unit = supervisorScope {
             val key = row.peer + "/" + row.id
-            val grant = Grant(this, download)
-            grants[key] = grant
-            try {
-                val request = OneTimeWorkRequestBuilder<TransferWorker>()
-                    .setInputData(workDataOf("transfer" to key))
-                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
-                    .build()
-                WorkManager.getInstance(context).enqueueUniqueWork(key, ExistingWorkPolicy.REPLACE, request)
-                grant.finished.await()
-            } finally { grants.remove(key, grant) }
+            val manager = WorkManager.getInstance(context)
+            var seconds = 10L
+            // The authenticated session belongs to ChatService. A scheduler stop may cancel a retry
+            // signal, but must never cancel the transfer or strand the grant.
+            while (isActive && !download()) {
+                val signal = CompletableDeferred<Unit>()
+                retries[key] = signal
+                val request = OneTimeWorkRequestBuilder<TransferWorker>().setInputData(workDataOf("transfer" to key))
+                    .setInitialDelay(seconds, TimeUnit.SECONDS).build()
+                try {
+                    manager.enqueueUniqueWork(key, ExistingWorkPolicy.REPLACE, request)
+                    withTimeoutOrNull(seconds * 1000) { signal.await() }
+                } finally {
+                    retries.remove(key,signal)
+                    manager.cancelWorkById(request.id)
+                }
+                seconds = (seconds * 2).coerceAtMost(60)
+            }
         }
     }
 }

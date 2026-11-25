@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.*
 import androidx.lifecycle.compose.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable private fun Choice(label: String, on: Boolean, change: (Boolean) -> Unit) {
     Row(Modifier.fillMaxWidth().toggleable(on,role=Role.Switch,onValueChange=change).heightIn(min=52.dp),
@@ -79,6 +81,22 @@ import kotlinx.coroutines.launch
     }
 }
 
+@Composable internal fun FirstTransferBatteryHelp(files: dev.lanchatshare.connectivity.Transfers) {
+    val c = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val opts by c.alerts.collectAsStateWithLifecycle(AlertOptions(batterySeen=true))
+    if (opts.batterySeen || c.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(c.packageName)) return
+    val active by remember(files) { files.activeOperations.map { it > 0 }.distinctUntilChanged() }.collectAsStateWithLifecycle(false)
+    var show by remember { mutableStateOf(false) }
+    LaunchedEffect(active) { if (active) show = true }
+    if (show) {
+        fun dismiss() { show = false; scope.launch { c.flag("batterySeen",true) } }
+        androidx.compose.material3.AlertDialog(onDismissRequest=::dismiss,title={Text("Keep sharing with the screen off")},
+            text={Column { Text("Some phones put local connections to sleep. If transfers pause while locked, allow background battery use for LanChatShare."); BatteryHelp() }},
+            confirmButton={TextButton(onClick=::dismiss) { Text("Got it") }})
+    }
+}
+
 @Composable internal fun Diagnostics() {
     val c = LocalContext.current
     val pm = c.getSystemService(PowerManager::class.java)
@@ -113,7 +131,8 @@ import kotlinx.coroutines.launch
     Text(tip)
     TextButton(onClick = {
         val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-        if (intent.resolveActivity(c.packageManager) != null) c.startActivity(intent)
-        else c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.fromParts("package",c.packageName,null)))
+        try { c.startActivity(intent) } catch (_: ActivityNotFoundException) {
+            c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.fromParts("package",c.packageName,null)))
+        }
     }) { Text("Review battery settings") }
 }

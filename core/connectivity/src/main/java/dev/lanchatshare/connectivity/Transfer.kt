@@ -6,7 +6,9 @@ import android.provider.OpenableColumns
 import androidx.room.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
@@ -42,6 +44,12 @@ internal fun fileHash(input: InputStream): String = input.use {
 }
 
 class Transfers internal constructor(private val context: Context, private val db: TrustDatabase) {
+    private val operations = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val activeOperations: kotlinx.coroutines.flow.StateFlow<Int> get() = operations
+    internal suspend fun <T> duringTransfer(block: suspend () -> T): T {
+        operations.update { it + 1 }
+        try { return block() } finally { operations.update { it - 1 } }
+    }
     internal val dao = db.transfers()
     val all = dao.all()
     private val directory = File(context.filesDir, "attachments")
@@ -93,7 +101,13 @@ class Transfers internal constructor(private val context: Context, private val d
             "declined" -> !row.outgoing && row.state == "offered"
             else -> false
         }
-        if (allowed) dao.change(row.peer, row.outgoing, row.id, row.state, next)
+        if (!allowed) return
+        dao.change(row.peer, row.outgoing, row.id, row.state, next)
+        if (next == "cancelled" && !row.outgoing) withContext(Dispatchers.IO) {
+            downloadLock[(row.id.hashCode() and Int.MAX_VALUE) % downloadLock.size].withLock {
+                if (dao.get(row.peer,false,row.id)?.state == "cancelled") File(file(row).path + ".partial").delete()
+            }
+        }
     }
     internal suspend fun offer(peer: TrustedPeer, frame: ChatFrame) = db.withTransaction {
         require(UUID.fromString(frame.id).toString() == frame.id && frame.text.length in 1..200 && frame.size >= 0 &&
