@@ -97,7 +97,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
     }
 }
 
-@Composable internal fun Diagnostics() {
+@Composable internal fun Diagnostics(benchmark: () -> Unit) {
     val c = LocalContext.current
     val pm = c.getSystemService(PowerManager::class.java)
     val running by ChatService.running.collectAsStateWithLifecycle()
@@ -114,6 +114,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
         Text(bt)
         Text(if (exempt) "Battery optimization is disabled for this app." else "Android may defer background network access during deep sleep.")
         BatteryHelp()
+        TextButton(onClick=benchmark) { Text("Transfer benchmark") }
         TextButton(onClick = { revision++ }) { Text("Refresh checks") }
     }
 }

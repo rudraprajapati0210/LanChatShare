@@ -72,6 +72,8 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
     private val queueDownload: suspend (Transfer, suspend () -> Boolean) -> Unit) {
     private val profile = profiles.profile.filterNotNull()
     private val status = MutableStateFlow("Waiting for a local network")
+    private val routeNames = MutableStateFlow<Map<String,String>>(emptyMap())
+    val paths = routeNames.asStateFlow()
     val networkStatus = status.asStateFlow()
     private val sessions = mutableMapOf<String, Int>()
     private val connected = MutableStateFlow(emptySet<String>())
@@ -179,6 +181,10 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
             if (count > 0) sessions[peer.id] = count else sessions.remove(peer.id)
             connected.value = sessions.keys.toSet()
         }
+        val address = runCatching { InetAddress.getByName(java.net.URI(origin).host.removeSurrounding("[","]").replace("%25","%")) }.getOrNull()
+        val link = address?.let { ip -> lanLinks(context).firstOrNull { it.contains(ip) } }
+        val path = when { link == null -> "Local LAN"; link.name.startsWith("p2p") -> "Wi-Fi Direct"; link.network == null -> "Downstream Wi-Fi / hotspot"; else -> "Wi-Fi client (router or hotspot)" }
+        routeNames.update { it + (peer.id to path) }
         change(1)
         attempts.update { it - peer.id }
         try { socket.chat(peer, trust, profile, supportsFiles) { row, token -> queueDownload(row) { trust.transfers.receive(row, client, origin, token) } } } finally { change(-1) }

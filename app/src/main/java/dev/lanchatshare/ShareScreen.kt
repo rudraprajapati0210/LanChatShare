@@ -69,6 +69,11 @@ import java.io.IOException
             else LinearProgressIndicator(progress = fraction, modifier = Modifier.fillMaxWidth())
             Text("${row.offset} / ${row.size} bytes", style = MaterialTheme.typography.labelSmall)
         }
+        val meter by TransferMeter.rates.collectAsStateWithLifecycle()
+        val finished by produceState<Rate?>(null,row.state,row.offset) {
+            if (row.state=="done") value=withContext(Dispatchers.IO){ TransferMeter.saved(context,row) }
+        }
+        (meter[row.meterKey()] ?: finished)?.let { Text(listOfNotNull(it.path,it.label(row.state=="done")).joinToString(" · "),style=MaterialTheme.typography.labelSmall) }
         val actions = when (row.state) {
             "offered" -> if (!row.outgoing) listOf("Accept" to "active", "Decline" to "declined") else emptyList()
             "active" -> listOf("Pause" to "paused")

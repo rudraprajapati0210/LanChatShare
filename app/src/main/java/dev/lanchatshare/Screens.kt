@@ -117,7 +117,8 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                         "Network and hotspot" -> NetworkSettings(chat)
                         "Profile" -> NameForm(profile, busy, failed, save)
                         "Notifications" -> NotificationSettings()
-                        "Diagnostics" -> Diagnostics()
+                        "Diagnostics" -> Diagnostics { detail = "Benchmark" }
+                        "Benchmark" -> BenchmarkScreen(trusted,trust.transfers,chat)
                         "Settings" -> Column {
                             TextButton(onClick = { detail = "Notifications" }) { Text("Notifications and reachability") }
                             TextButton(onClick = { detail = "Diagnostics" }) { Text("Diagnostics") }

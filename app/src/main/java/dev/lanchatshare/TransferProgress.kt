@@ -22,7 +22,7 @@ internal suspend fun Service.observeProgress(trust: TrustStore) {
             current.add(key)
             val now = SystemClock.elapsedRealtime()
             val old = samples.put(key,now to row.offset)
-            val speed = if (old == null) "" else {
+            val speed = TransferMeter.rates.value[row.meterKey()]?.let { " · " + it.label(false) } ?: if (old == null) "" else {
                 val rate = ((row.offset-old.second).coerceAtLeast(0)*1000.0 / (now-old.first).coerceAtLeast(1)) / 1e6
                 " · %.1f MB/s".format(rate)
             }

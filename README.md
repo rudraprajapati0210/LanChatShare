@@ -46,6 +46,10 @@ LanChatShare uses the connected-device foreground service for communication with
 
 ## Build
 
+### Measure transfer speed
+
+Open Settings → Diagnostics → Transfer benchmark. Choose a paired phone and run 10 MB, 100 MB and 1 GB separately. Accept each offer on the second phone and wait for Delivered. Use Copy results or Export JSON on both phones. Repeat on the same router with the receiver locked, then on a hotspot. Label the reports with phone models, which phone hosted the network, and which screen was locked. Negotiated Wi-Fi Mbps is a link rate; MB/s is measured application throughput. The meter starts at observed acceptance and includes final verification. After a process restart the report identifies the offset at which measurement resumed.
+
 Open the root folder in Android Studio with JDK 17 or later, Android SDK Platform 37.1, and a configured Android SDK location. On Windows run `./gradlew.bat :app:assembleDebug :core:data:testDebugUnitTest :app:lintDebug`. On macOS or Linux use `./gradlew`. The debug APK is generated under `app/build/outputs/apk/debug`. The build downloads dependencies. The installed app works offline. Nearby explains the Bluetooth permissions when opened.
 
 For the Compose flow test, use a fresh emulator or dedicated test device with empty app data, then run `./gradlew.bat :app:connectedDebugAndroidTest`. The test writes a profile to that test installation. The repository test independently reopens a real preferences file across three store lifetimes.

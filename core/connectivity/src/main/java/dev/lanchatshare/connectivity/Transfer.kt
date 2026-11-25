@@ -64,6 +64,30 @@ class Transfers internal constructor(private val context: Context, private val d
             requireNotNull(resolver.openInputStream(uri))
         }
     }
+    suspend fun addBenchmark(peer: TrustedPeer, megabytes: Int) {
+        require(megabytes in listOf(10, 100, 1000))
+        stage(listOf(peer), "LAN benchmark ${megabytes} MB.bin", "application/octet-stream") {
+            val block = ByteArray(65536).also(java.util.Random(147)::nextBytes)
+            object : InputStream() {
+                var remaining = megabytes * 1_000_000L
+                var cursor = 0
+                override fun read(): Int {
+                    if (remaining == 0L) return -1
+                    remaining--
+                    return block[cursor++ and 65535].toInt() and 255
+                }
+                override fun read(bytes: ByteArray, offset: Int, length: Int): Int {
+                    if (length == 0) return 0
+                    if (remaining == 0L) return -1
+                    val pos = cursor and 65535
+                    val count = minOf(length.toLong(), remaining, (block.size-pos).toLong()).toInt()
+                    block.copyInto(bytes,offset,pos,pos+count)
+                    cursor += count; remaining -= count
+                    return count
+                }
+            }
+        }
+    }
     suspend fun addText(peers: List<TrustedPeer>, text: String) = stage(peers, "Shared text.txt", "text/plain") { text.byteInputStream() }
     fun forPeer(peer: TrustedPeer) = dao.observe(peer.id, peer.pin)
     internal suspend fun stage(peers: List<TrustedPeer>, title: String, mime: String, open: () -> InputStream) = withContext(Dispatchers.IO) {

@@ -2,6 +2,8 @@
 
 ## Two-emulator transfer baseline
 
+Recovery audit: the original pending app built and the existing JVM tests passed. No explicit source TODOs were found. The Library remains a placeholder and the fallback screen contains obsolete milestone-E copy. The Diagnostics benchmark now queues selectable 10/100/1000 MB files, records sampled local throughput, link metadata, screen state, stalls and CPU time, and exports or copies a JSON report. Wi-Fi client telemetry cannot distinguish a router from another phone's hotspot. Next: validate the benchmark screen, then compare the windowed range experiment with the recorded baseline.
+
 The test APK ran two independent Keystore identities on API 37 emulators over virtual Wi-Fi. Decimal 10, 30, 100 and 500 MB transfers reached verified completion in 21.762, 53.640, 92.352 and 564.714 seconds. Median durable chat receipt times during those runs were 230, 158, 105 and 107 ms (18, 46, 84 and 505 probes). These are emulator results. The separate ADB relay pilot took 36.648 seconds for 10 MB.
 
 At 1 GB the sender harness hit its fixed 20-minute test deadline. The receiver recorded 779,878,400 bytes at 1,200.098 seconds and a failed request after the listener shut down. Both traces showed continuing progress immediately before the shutdown. The harness now uses lack of progress rather than total elapsed time. The runner installs only the instrumentation package and provisions two test public-key pins. Next: verify the recovered Diagnostics benchmark and test a bounded range stream against this baseline.

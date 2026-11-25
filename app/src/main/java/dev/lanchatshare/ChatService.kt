@@ -34,6 +34,7 @@ class ChatService : Service() {
             }.collect { if (it) stopSelf() }
         }
         scope.launch { observeTexts(trust) }
+        scope.launch { TransferMeter.observe(applicationContext,trust.transfers,chat) }
         scope.launch { observeProgress(trust) }
         scope.launch { observeOffers(trust) }
         scope.launch {
