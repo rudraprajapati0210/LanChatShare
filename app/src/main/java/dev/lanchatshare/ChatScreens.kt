@@ -82,6 +82,10 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     var error by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val scroll = rememberLazyListState()
+    val latest = history.lastOrNull()
+    LaunchedEffect(peer.id, latest?.id, latest?.outgoing) {
+        if (latest != null) scroll.scrollToItem(0)
+    }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Text(if (peer.id in online) "Connected over Wi-Fi" else if (network == "On the local network") "Waiting for peer · messages will queue" else network,
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -111,7 +115,7 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
             Button(enabled = draft.isNotBlank() && !busy, onClick = {
                 busy = true
                 scope.launch {
-                    try { trust.enqueue(peer.id, draft); draft = ""; error = false; scroll.scrollToItem(0) }
+                    try { trust.enqueue(peer.id, draft); draft = ""; error = false }
                     catch (e: kotlinx.coroutines.CancellationException) { throw e }
                     catch (_: Exception) { error = true } finally { busy = false }
                 }
