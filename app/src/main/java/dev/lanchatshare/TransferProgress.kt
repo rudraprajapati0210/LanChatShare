@@ -14,7 +14,7 @@ internal suspend fun Service.observeProgress(trust: TrustStore) {
     val samples = mutableMapOf<String,Pair<Long,Long>>()
     var posted = nm.activeNotifications.filter { it.id == 43 }.mapNotNull { it.tag }.toSet()
     combine(trust.transfers.all,alerts,alertPermission) { rows, options, _ ->
-        rows.filter { options.transfers && it.state == "active" && mayNotify() } to options
+        rows.filter { options.transfers && it.state in listOf("active", "retrying") && mayNotify() } to options
     }.sample(750).collect { (rows, options) ->
         val current = mutableSetOf<String>()
         for (row in rows) {
@@ -27,11 +27,14 @@ internal suspend fun Service.observeProgress(trust: TrustStore) {
                 " · %.1f MB/s".format(rate)
             }
             val percent = if (row.size == 0L) 0 else (row.offset.toDouble()/row.size*100).toInt().coerceIn(0,100)
+            val status = if (row.state == "retrying") {
+                "Reconnecting · resuming at " + android.text.format.Formatter.formatFileSize(this, row.offset)
+            } else "$percent%$speed"
             fun action(name: String) = PendingIntent.getBroadcast(this,0,Intent(this,TransferDecision::class.java)
                 .setData(Uri.Builder().scheme("lanchatshare").authority("transfer").appendPath(row.peer).appendPath(row.id)
                     .appendPath(name).appendPath(if (row.outgoing) "sent" else "received").build()),PendingIntent.FLAG_IMMUTABLE)
             nm.notify(key,43,Notification.Builder(this,"transfer_progress").setSmallIcon(R.drawable.nav_chat)
-                .setContentTitle(if (options.preview) row.name else "File transfer").setContentText("$percent%$speed")
+                .setContentTitle(if (options.preview) row.name else "File transfer").setContentText(status)
                 .setVisibility(if (options.hideLocked) Notification.VISIBILITY_SECRET else Notification.VISIBILITY_PUBLIC)
                 .setContentIntent(openPeer(row.peer)).setOnlyAlertOnce(true).setOngoing(true).setProgress(100,percent,false)
                 .addAction(Notification.Action.Builder(null,"Pause",action("paused")).build())

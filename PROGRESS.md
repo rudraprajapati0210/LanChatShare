@@ -1,5 +1,7 @@
 # LanChatShare progress
 
+The foreground service and progress notification now recognize a retrying download while its peer is offline. With Stay reachable disabled and the app in the background, the Android regression confirmed that the retry notification survives, its Pause action updates Room, and the service and notification go away. The debug build, JVM suite and both background notification tests passed. Next: collect the 1 GB result and run the interrupted TLS integration test.
+
 Verified the benchmark picker through Settings → Diagnostics on API 37. The test selects a paired phone, checks available sizes and returns to Chats. During the Android share-sheet test, activity replacement briefly left no Compose root. The test now waits through that transition. All six app instrumentation tests passed. The debug APK and all 16 JVM tests passed. Next is the transport instrumentation suite and the final 1 GB digest.
 
 The JVM codec regression streamed 2 GiB plus one byte from a sparse file, verified every CRC frame, and matched the independently calculated SHA-256 across the signed 32-bit boundary. It retains a single response window at a time. This exercises the codec and offsets only. Measuring Android process memory over a complete 2 GB transfer remains open.

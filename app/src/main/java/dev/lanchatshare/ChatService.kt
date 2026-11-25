@@ -29,8 +29,8 @@ class ChatService : Service() {
         running.value = true
         scope.launch { holdTransferPower(trust.transfers.activeOperations) }
         scope.launch {
-            kotlinx.coroutines.flow.combine(alerts,foreground,trust.transfers.all,chat.online) { opts, visible, rows, online ->
-                !opts.reachable && !visible && rows.none { it.state == "active" && it.peer in online }
+            kotlinx.coroutines.flow.combine(alerts,foreground,trust.transfers.all) { opts, visible, rows ->
+                !opts.reachable && !visible && rows.none { it.state == "active" || it.state == "retrying" }
             }.collect { if (it) stopSelf() }
         }
         scope.launch { observeTexts(trust) }
@@ -44,6 +44,12 @@ class ChatService : Service() {
         }
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
-    override fun onDestroy() { running.value = false; scope.cancel(); super.onDestroy() }
+    override fun onDestroy() {
+        running.value = false
+        scope.cancel()
+        val notifications = getSystemService(NotificationManager::class.java)
+        notifications.activeNotifications.filter { it.id == 43 }.forEach { notifications.cancel(it.tag, it.id) }
+        super.onDestroy()
+    }
     override fun onBind(intent: Intent?): IBinder? = null
 }

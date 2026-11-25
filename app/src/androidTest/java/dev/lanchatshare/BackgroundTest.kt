@@ -13,6 +13,51 @@ import org.junit.Test
 import java.util.UUID
 
 class BackgroundTest {
+    @Test fun retryRemainsVisibleUntilPausedInBackground() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val id = UUID.randomUUID().toString()
+        val peer = UUID.randomUUID().toString()
+        val previous = runBlocking { context.alerts.first().reachable }
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            lateinit var trust: dev.lanchatshare.connectivity.TrustStore
+            scenario.onActivity { trust = it.trustStore }
+            runBlocking { trust.transfers.all.first() }
+            context.openOrCreateDatabase("peers.db", Context.MODE_PRIVATE, null).use { db ->
+                try {
+                    db.execSQL("INSERT INTO transfers(peer,outgoing,id,name,mime,size,hash,pin,token,state,offset,time) " +
+                        "VALUES(?,0,?,'sample','application/octet-stream',8388608,'','','','retrying',1048576,1)", arrayOf(peer,id))
+                    context.stopService(Intent(context,ChatService::class.java))
+                    runBlocking {
+                        withTimeout(5000) { while (ChatService.running.value) delay(50) }
+                        context.flag("reachable",false)
+                    }
+                    scenario.onActivity { it.startForegroundService(Intent(it,ChatService::class.java)) }
+                    val notice = runBlocking {
+                        withTimeout(10000) {
+                            val tag = "$peer/$id/false"
+                            while (manager.activeNotifications.none { it.tag == tag }) delay(100)
+                            manager.activeNotifications.first { it.tag == tag }.notification
+                        }
+                    }
+                    assertTrue(notice.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.startsWith("Reconnecting") == true)
+                    scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+                    assertTrue(ChatService.running.value)
+                    notice.actions.single { it.title == "Pause" }.actionIntent.send()
+                    runBlocking {
+                        withTimeout(8000) {
+                            trust.transfers.all.first { rows -> rows.any { it.id == id && it.state == "paused" } }
+                            while (ChatService.running.value || manager.activeNotifications.any { it.tag == "$peer/$id/false" }) delay(100)
+                        }
+                    }
+                } finally {
+                    db.delete("transfers","id=?",arrayOf(id))
+                    runBlocking { context.flag("reachable",previous) }
+                    context.stopService(Intent(context,ChatService::class.java))
+                }
+            }
+        }
+    }
     @Test fun backgroundTextPostsAndReadActionClearsIt() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val manager = context.getSystemService(NotificationManager::class.java)
