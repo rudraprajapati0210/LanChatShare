@@ -26,6 +26,8 @@ data class Transfer(val peer: String, val outgoing: Boolean, val id: String, val
     suspend fun granted(id: String, token: String): Transfer?
     @Query("UPDATE transfers SET state=:next WHERE peer=:peer AND outgoing=:outgoing AND id=:id AND state=:was")
     suspend fun change(peer: String, outgoing: Boolean, id: String, was: String, next: String)
+    @Query("UPDATE transfers SET offset=:offset WHERE peer=:peer AND outgoing=0 AND id=:id")
+    suspend fun checkpoint(peer: String, id: String, offset: Long)
     @Query("UPDATE transfers SET offset=:offset WHERE peer=:peer AND outgoing=:outgoing AND id=:id AND offset<:offset")
     suspend fun progress(peer: String, outgoing: Boolean, id: String, offset: Long)
     @Query("UPDATE transfers SET state='revoked' WHERE peer=:peer AND state NOT IN ('done','declined')")
@@ -85,7 +87,7 @@ class Transfers internal constructor(private val context: Context, private val d
     }
     suspend fun action(row: Transfer, next: String) {
         val allowed = when (next) {
-            "active" -> row.state in listOf("paused", "failed") || (!row.outgoing && row.state == "offered")
+            "active" -> row.state in listOf("paused", "failed", "storage", "invalid") || (!row.outgoing && row.state == "offered")
             "paused" -> row.state == "active"
             "declined" -> !row.outgoing && row.state == "offered"
             else -> false
@@ -105,7 +107,7 @@ class Transfers internal constructor(private val context: Context, private val d
         if (row.pin == peer.pin && row.state in listOf("active","paused")) {
             dao.change(row.peer, true, row.id, row.state, "done")
             dao.progress(row.peer, true, row.id, row.size)
-            db.messages().acknowledge(row.peer, row.id)
+            db.messages().acknowledge(row.peer, row.id, attachment = true)
         }
     }
 }

@@ -28,6 +28,7 @@ dependencies {
     implementation(project(":core:connectivity"))
     implementation(project(":core:data"))
     implementation(project(":core:design"))
+    implementation(libs.work)
     implementation(libs.hilt)
     ksp(libs.compiler)
     implementation(libs.activity)

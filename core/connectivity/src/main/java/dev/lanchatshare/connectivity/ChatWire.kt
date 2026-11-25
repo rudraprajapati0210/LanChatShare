@@ -15,7 +15,7 @@ import java.util.UUID
 @Serializable
 internal data class ChatFrame(val type: String, val v: Int = 1, val id: String = "", val text: String = "",
     val key: String = "", val proof: String = "", val token: String? = null, val colour: Int = 0,
-    val size: Long = 0, val hash: String = "", val mime: String = "")
+    val files: Boolean = false, val size: Long = 0, val hash: String = "", val mime: String = "")
 
 private val wire = Json { ignoreUnknownKeys = true }
 private val b64 = Base64.getEncoder()
@@ -30,7 +30,7 @@ internal suspend fun WebSocketSession.read(): ChatFrame {
 private fun proofBytes(server: String, client: String, challenge: String) =
     "LanChatShare chat v1/$server/$client/$challenge".encodeToByteArray()
 
-internal suspend fun WebSocketSession.authenticateIncoming(local: String, trust: TrustStore): TrustedPeer {
+internal suspend fun WebSocketSession.authenticateIncoming(local: String, trust: TrustStore, supportsFiles: (Boolean) -> Unit = {}): TrustedPeer {
     val challenge = b64.encodeToString(ByteArray(32).also(SecureRandom()::nextBytes))
     write(ChatFrame("challenge", id = local, text = challenge))
     val hello = read()
@@ -42,26 +42,28 @@ internal suspend fun WebSocketSession.authenticateIncoming(local: String, trust:
         initVerify(key); update(proofBytes(local, peer.id, challenge)); verify(decode.decode(hello.proof))
     })
     require(trust.checkHandoff(peer.id, hello.token?.let(decode::decode)))
-    write(ChatFrame("ready", id = local))
+    supportsFiles(hello.files)
+    write(ChatFrame("ready", id = local, files = true))
     return peer
 }
 
-internal suspend fun WebSocketSession.authenticateOutgoing(local: String, peer: TrustedPeer, keys: KeyPair, token: ByteArray?) {
+internal suspend fun WebSocketSession.authenticateOutgoing(local: String, peer: TrustedPeer, keys: KeyPair, token: ByteArray?, supportsFiles: (Boolean) -> Unit = {}) {
     val challenge = read()
     require(challenge.type == "challenge" && challenge.id == peer.id && decode.decode(challenge.text).size == 32)
     val signature = Signature.getInstance("SHA256withECDSA").run {
         initSign(keys.private); update(proofBytes(peer.id, local, challenge.text)); sign()
     }
-    write(ChatFrame("identity", id = local, key = b64.encodeToString(keys.public.encoded),
+    write(ChatFrame("identity", id = local, files = true, key = b64.encodeToString(keys.public.encoded),
         proof = b64.encodeToString(signature), token = token?.let(b64::encodeToString)))
     val ready = read()
     require(ready.type == "ready" && ready.id == peer.id)
+    supportsFiles(ready.files)
 }
 
 internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore, profile: Flow<Profile>,
-    fetch: (suspend (Transfer, String) -> Unit)? = null) = coroutineScope {
+    supportsFiles: Boolean = true, fetch: (suspend (Transfer, String) -> Unit)? = null) = coroutineScope {
     val ws = this@chat
-    val offers = launch { ws.announceTransfers(peer, trust.transfers) }
+    val offers = launch { if (supportsFiles) ws.announceTransfers(peer, trust.transfers) }
     val downloads = mutableMapOf<String, Job>()
     val sender = launch {
         while (isActive) {

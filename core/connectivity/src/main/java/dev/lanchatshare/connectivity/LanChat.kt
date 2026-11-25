@@ -68,7 +68,8 @@ internal fun chatServer(hosts: List<String>, port: Int, tls: SSLContext, files: 
         }
     }
 
-class LanChat(private val context: Context, private val trust: TrustStore, profiles: ProfileRepository) {
+class LanChat(private val context: Context, private val trust: TrustStore, profiles: ProfileRepository,
+    private val queueDownload: suspend (Transfer, suspend () -> Boolean) -> Unit) {
     private val profile = profiles.profile.filterNotNull()
     private val status = MutableStateFlow("Waiting for a local network")
     val networkStatus = status.asStateFlow()
@@ -112,11 +113,12 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         val previousNetwork = manager.boundNetworkForProcess
         val server = chatServer(links.map { requireNotNull(it.address.hostAddress) }.distinct(), LAN_PORT, tls, trust.transfers) { address ->
             if (challenges.incrementAndGet() > 12) { challenges.decrementAndGet(); return@chatServer }
-            val peer = try { withTimeout(10000) { authenticateIncoming(local.id, trust) } }
+            var supportsFiles = false
+            val peer = try { withTimeout(10000) { authenticateIncoming(local.id, trust) { supportsFiles = it } } }
                 finally { challenges.decrementAndGet() }
             chatClient(peer, credentials).use { http ->
                 val host = if (address.contains(':')) "[" + address.replace("%", "%25") + "]" else address
-                exchange(this, peer, http, "https://$host:$LAN_PORT")
+                exchange(this, peer, http, "https://$host:$LAN_PORT", supportsFiles)
             }
         }
         try {
@@ -142,12 +144,13 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                                 try {
                                     chatClient(peer, credentials).use { client ->
                                         client.webSocket(urlString = "wss://$literal:$port/v1/chat") {
+                                            var supportsFiles = false
                                             withTimeout(10000) {
                                                 val token = trust.pendingToken(peer.id)
-                                                authenticateOutgoing(local.id, peer, identityKeys(), token)
+                                                authenticateOutgoing(local.id, peer, identityKeys(), token) { supportsFiles = it }
                                                 trust.completeOutgoing(peer.id, token)
                                             }
-                                            exchange(this, peer, client, "https://$literal:$port")
+                                            exchange(this, peer, client, "https://$literal:$port", supportsFiles)
                                         }
                                     }
                                     break
@@ -170,7 +173,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         }
     }
 
-    private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer, client: HttpClient, origin: String) {
+    private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer, client: HttpClient, origin: String, supportsFiles: Boolean) {
         fun change(delta: Int) = synchronized(sessions) {
             val count = (sessions[peer.id] ?: 0) + delta
             if (count > 0) sessions[peer.id] = count else sessions.remove(peer.id)
@@ -178,7 +181,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         }
         change(1)
         attempts.update { it - peer.id }
-        try { socket.chat(peer, trust, profile) { row, token -> trust.transfers.receive(row, client, origin, token) } } finally { change(-1) }
+        try { socket.chat(peer, trust, profile, supportsFiles) { row, token -> queueDownload(row) { trust.transfers.receive(row, client, origin, token) } } } finally { change(-1) }
     }
 }
 

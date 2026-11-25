@@ -1,7 +1,8 @@
 package dev.lanchatshare.connectivity
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
+import io.ktor.client.statement.*
+import io.ktor.utils.io.readFully
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.response.*
@@ -44,43 +45,62 @@ internal suspend fun Transfers.receive(row: Transfer, client: HttpClient, origin
         target.parentFile!!.mkdirs()
         val part = File(target.path + ".partial")
         suspend fun active() = dao.get(row.peer, false, row.id)?.let { it.pin == row.pin && it.state == "active" } == true
-        if (!active()) return@withContext
+        if (!active()) return@withContext true
         if (!target.exists()) {
             RandomAccessFile(part, "rw").use { out ->
-                var start = out.length()
+                val durable = dao.get(row.peer, false, row.id)?.offset ?: return@withContext true
+                val present = minOf(out.length(), durable, row.size)
+                var start = if (present == row.size) present else present - present % RANGE_BLOCK
+                if (out.length() != start) out.setLength(start)
+                if (durable != start) dao.checkpoint(row.peer, row.id, start)
+                if (row.size - start > target.parentFile!!.usableSpace) {
+                    dao.change(row.peer, false, row.id, "active", "storage")
+                    return@withContext true
+                }
                 while (start < row.size && active()) {
                     val end = start + minOf(row.size - start, RANGE_BLOCK.toLong()) - 1
-                    val response = withTimeout(30000) { client.get("$origin/v1/files/${row.id}") {
-                        header(HttpHeaders.Authorization, "Bearer $token")
-                        header(HttpHeaders.Range, "bytes=$start-$end")
-                    } }
-                    if (response.status == HttpStatusCode.Forbidden) return@withContext
-                    check(response.status == HttpStatusCode.PartialContent &&
-                        response.headers[HttpHeaders.ContentRange] == "bytes $start-$end/${row.size}")
-                    val bytes = response.body<ByteArray>()
-                    check(bytes.size.toLong() == end - start + 1)
+                    val bytes = try {
+                        withTimeout(30000) {
+                            client.prepareGet("$origin/v1/files/${row.id}") {
+                                header(HttpHeaders.Authorization, "Bearer $token")
+                                header(HttpHeaders.Range, "bytes=$start-$end")
+                            }.execute { response ->
+                                if (response.status == HttpStatusCode.Forbidden) return@execute null
+                                check(response.status == HttpStatusCode.PartialContent &&
+                                    response.headers[HttpHeaders.ContentRange] == "bytes $start-$end/${row.size}" &&
+                                    response.headers[HttpHeaders.ContentLength]?.toLongOrNull() == end - start + 1)
+                                ByteArray((end - start + 1).toInt()).also { response.bodyAsChannel().readFully(it) }
+                            }
+                        }
+                    } catch (_: java.io.IOException) { return@withContext false }
+                    if (bytes == null) return@withContext true
                     out.seek(start); out.write(bytes); out.fd.sync()
                     start = end + 1
                     dao.progress(row.peer, false, row.id, start)
                 }
             }
-            if (!active()) return@withContext
+            if (!active()) return@withContext true
             if (part.length() != row.size || fileHash(part.inputStream()) != row.hash) {
                 part.delete()
-                error("Attachment verification failed")
+                dao.checkpoint(row.peer, row.id, 0)
+                dao.change(row.peer, false, row.id, "active", "invalid")
+                return@withContext true
             }
             check(part.renameTo(target))
         }
         dao.change(row.peer, false, row.id, "active", "done")
+        true
     } catch (e: CancellationException) {
         if (!currentCoroutineContext().isActive) throw e
-        dao.change(row.peer, false, row.id, "active", "failed")
+        false
     } catch (_: Exception) {
         dao.change(row.peer, false, row.id, "active", "failed")
+        true
     } finally { lock.unlock() }
 }
 
 internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files: Transfers) {
+    var previous = emptySet<ChatFrame>()
     files.dao.observe(peer.id, peer.pin).map { rows -> rows.mapNotNull { row ->
         val type = if (row.outgoing) when (row.state) {
             "offered" -> "file.offer"
@@ -94,6 +114,9 @@ internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files
         }
         type?.let { ChatFrame(it, id = row.id, text = row.name, size = row.size, hash = row.hash,
             mime = row.mime, token = if (it == "file.grant") row.token else null) }
-    } }.distinctUntilChanged().collect { frames -> frames.forEach { write(it) } }
+    } }.distinctUntilChanged().collect { frames ->
+        frames.filterNot { it in previous }.forEach { write(it) }
+        previous = frames.toSet()
+    }
 }
 
