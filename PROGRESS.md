@@ -1,6 +1,14 @@
 # LanChatShare progress
 
-## Current checkpoint — one-to-one chat
+## Current checkpoint — Share and inline photos
+
+The user confirmed physical verification of chat and Wi-Fi/hotspot operation. Milestone E adds auto-scroll, photo sharing in conversations, inline previews, a multi-recipient Share hub and a transfer journal. Room v4 preserves existing messages and peers. Consent and receipts travel over chat. File contents use authenticated HTTPS ranges and SHA-256 verification. The sender stages one immutable copy across recipients.
+
+The Android transport regression checks refusal before acceptance, resuming a partial download and byte-for-byte delivery. The chat UI regression checks an incoming message while scrolled up. The physical transfer checklist is in README.md. Library categorization is next.
+
+The debug APK builds. All 13 JVM tests and six targeted API 37 Android tests passed. The transfer test rejects corrupted partial content before a successful retry. The UI test checks a decoded photo preview, a real WorkManager retry and Android Share-sheet input. Android Lint reports zero errors and three existing warnings.
+
+## Previous checkpoint — one-to-one chat
 
 The debug app sends durable messages and delivery receipts over mutually authenticated Netty/CIO WebSockets. Updating both phones preserves the Bluetooth identity and existing Room pins. Weekly TLS keys have a separate purpose from pairing keys. Nearby can revoke a peer, end its sessions and remove queued outgoing messages while retaining delivered history.
 

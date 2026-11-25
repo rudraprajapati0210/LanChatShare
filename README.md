@@ -10,6 +10,21 @@ Chats opens directly after the one-time name prompt. Verify a phone in Nearby, t
 4. Repeat with one phone hosting a hotspot, then swap hosts. With a third phone, disconnect and rejoin one client while the other continues chatting.
 5. In Nearby, choose Forget on a trusted phone and confirm. Check that it cannot reconnect until you verify it again. Forgetting removes unsent messages and retains delivered history.
 
+## Share photos and files
+
+Update both phones. In a conversation, tap **Photo** and pick an image. The other phone can accept it in chat, see it inline and use **Save a copy** to export the original. Incoming text and photo offers bring the open conversation to the newest item.
+
+In **Share files**, pick photos, videos, documents, APKs, vCards or text, select one or more paired phones and tap **Send**. You can also choose LanChatShare in the gallery or another app's Android Share sheet. It opens the recipient picker before sending. Each recipient decides independently. **Transfers** shows requests, progress, pause, resume, retry and history. Enable incoming-file notifications there to accept or decline in the background.
+
+The app stages a private copy before offering it. Interrupted downloads resume from a recorded 256 KiB boundary and undergo full SHA-256 verification before becoming available. Both phones need free space for their copies. After an Android force-stop, reopen the app.
+
+### Physical checks for Share
+
+1. Scroll up in a busy conversation. Have the other phone send text and then a photo. Check that each appears in view and that accepting the photo shows its preview. Export it with Save a copy.
+2. Send a large file, pause and resume, disconnect Wi-Fi partway and rejoin. Background and reopen the app. Compare the exported file's SHA-256 with the original.
+3. Choose two phones, accept on one and decline on the other. Check their independent statuses. Repeat on a hotspot with mobile data off.
+4. Try an empty file, a file larger than 4 GiB where space permits, low storage and an APK. Check consent and recovery with notifications allowed and denied.
+
 ## Build
 
 Open the root folder in Android Studio with JDK 17 or later, Android SDK Platform 37.1, and a configured Android SDK location. On Windows run `./gradlew.bat :app:assembleDebug :core:data:testDebugUnitTest :app:lintDebug`. On macOS or Linux use `./gradlew`. The debug APK is generated under `app/build/outputs/apk/debug`. The build downloads dependencies. The installed app works offline. Nearby explains the Bluetooth permissions when opened.
