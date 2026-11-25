@@ -51,9 +51,43 @@ class ChatUiTest {
             ui.waitUntil(15000) { ui.onAllNodesWithText("New incoming message").fetchSemanticsNodes().isNotEmpty() }
             ui.onNodeWithText("New incoming message").assertIsDisplayed()
             ui.onNodeWithText("Photo").assertIsDisplayed()
+            val resolver = context.contentResolver
+            val title = "LanChatShare-$id.png"
+            val photo = requireNotNull(resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                android.content.ContentValues().apply { put("_display_name", title); put("mime_type", "image/png") }))
+            try {
+                resolver.openOutputStream(photo)!!.use {
+                    android.graphics.Bitmap.createBitmap(4, 4, android.graphics.Bitmap.Config.ARGB_8888)
+                        .compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                }
+                val row = runBlocking {
+                    val recipient = trust.peers.first().first { it.id == id }
+                    trust.transfers.add(listOf(recipient), photo)
+                    trust.transfers.forPeer(recipient).first { it.isNotEmpty() }.single()
+                }
+                // The synthetic incoming text above has a future timestamp. Scroll to the attachment explicitly.
+                ui.onNode(hasScrollToIndexAction()).performScrollToIndex(1)
+                ui.waitUntil(15000) { ui.onAllNodesWithContentDescription(title).fetchSemanticsNodes().isNotEmpty() }
+                ui.onNodeWithContentDescription(title).assertIsDisplayed()
+                runBlocking {
+                    var attempts = 0
+                    kotlinx.coroutines.withTimeout(90000) {
+                        TransferWorker.queue(context, row) { ++attempts >= 2 }
+                    }
+                    org.junit.Assert.assertEquals(2, attempts)
+                }
+                trust.transfers.file(row).delete()
+            } finally { resolver.delete(photo, null, null) }
             ui.onNodeWithText("Share files").performClick()
             ui.onNodeWithText("Transfers").assertIsDisplayed()
+            ui.activityRule.scenario.onActivity { activity ->
+                activity.startActivity(android.content.Intent(activity, MainActivity::class.java)
+                    .setAction(android.content.Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_TEXT, "From the Android share sheet"))
+            }
+            ui.waitUntil(10000) { ui.onAllNodesWithText("From the Android share sheet").fetchSemanticsNodes().isNotEmpty() }
         } finally {
+            db.delete("transfers", "peer = ?", arrayOf(id))
             db.delete("messages", "peerId = ?", arrayOf(id))
             db.delete("trusted_peers", "id = ?", arrayOf(id))
             db.close()

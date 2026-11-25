@@ -76,7 +76,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
     }
 }
 
-@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, save: (String, Int?) -> Unit) {
+@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, incoming: IncomingShare?, consumed: () -> Unit, save: (String, Int?) -> Unit) {
     var section by rememberSaveable { mutableStateOf("Chats") }
     var detail by rememberSaveable { mutableStateOf("") }
     var sharing by rememberSaveable { mutableStateOf(false) }
@@ -86,6 +86,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
     val openChat: (dev.lanchatshare.connectivity.TrustedPeer) -> Unit = {
         section = "Chats"; detail = "Conversation"; peerId = it.id; sharing = false
     }
+    LaunchedEffect(incoming) { if (incoming != null) sharing = true }
     val page = if (sharing) "Share files" else detail.ifEmpty { section }
     fun back() { if (sharing) sharing = false else if (detail.isNotEmpty()) detail = "" else section = "Chats" }
     BackHandler(sharing || detail.isNotEmpty() || section != "Chats") { back() }
@@ -104,7 +105,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                 if (trusted.isNotEmpty()) ChatAccess()
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (page) {
-                        "Share files" -> ShareScreen(trusted, trust.transfers)
+                        "Share files" -> ShareScreen(trusted, trust.transfers, incoming, consumed, peer?.id.takeIf { detail == "Conversation" })
                         "Nearby" -> NearbyScreen(profile, trust, openChat)
                         "Conversation" -> peer?.let { Conversation(it, trust, chat) { section = "Settings"; detail = "Network and hotspot" } }
                         "Chats" -> ChatList(trusted, trust, chat, openChat) { select("Nearby") }

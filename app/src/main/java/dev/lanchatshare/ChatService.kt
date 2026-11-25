@@ -11,6 +11,7 @@ import kotlinx.coroutines.*
 @AndroidEntryPoint
 class ChatService : Service() {
     @Inject lateinit var chat: LanChat
+    @Inject lateinit var trust: dev.lanchatshare.connectivity.TrustStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     override fun onCreate() {
         super.onCreate()
@@ -22,6 +23,7 @@ class ChatService : Service() {
         startForeground(31, Notification.Builder(this, channel).setSmallIcon(R.drawable.nav_chat)
             .setContentTitle("LanChatShare").setContentText("Available for local chats")
             .setContentIntent(launch).setOngoing(true).build())
+        scope.launch { observeOffers(trust) }
         scope.launch {
             try { chat.run() }
             catch (e: CancellationException) { throw e }

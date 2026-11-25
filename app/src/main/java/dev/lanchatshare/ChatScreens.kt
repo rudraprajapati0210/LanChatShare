@@ -109,7 +109,8 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.outgoing) Arrangement.End else Arrangement.Start) {
                     Column(Modifier.fillMaxWidth(.80f), horizontalAlignment = if (message.outgoing) Alignment.End else Alignment.Start) {
                         Surface(shape = RoundedCornerShape(20.dp, 20.dp, if (message.outgoing) 5.dp else 20.dp, if (message.outgoing) 20.dp else 5.dp),
-                            color = if (message.outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer) {
+                            color = if (message.attachment && message.outgoing) MaterialTheme.colorScheme.secondaryContainer
+                            else if (message.outgoing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer) {
                             val transfer = byMessage[message.id to message.outgoing]
                             if (message.attachment && transfer != null) TransferItem(transfer, trust.transfers, preview = true)
                             else Text(message.text, Modifier.padding(horizontal = 14.dp, vertical = 9.dp))
