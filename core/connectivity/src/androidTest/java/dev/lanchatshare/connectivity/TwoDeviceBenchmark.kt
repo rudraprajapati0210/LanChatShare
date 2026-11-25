@@ -82,7 +82,8 @@ class TwoDeviceBenchmark {
                         http.webSocket(urlString="wss://$host:47831/v1/chat") {
                             authenticateOutgoing(local.id,peer,identityKeys(),null)
                             chat(peer,store,flowOf(local)) { row,token ->
-                                while (!store.transfers.receive(row,http,origin,token)) { Log.i("LcsBench","RETRY ${row.id}"); delay(1000) }
+                                val window = args.getString("windowBytes")?.toInt() ?: RANGE_BLOCK
+                                while (!store.transfers.receive(row,http,origin,token,window)) { Log.i("LcsBench","RETRY ${row.id}"); delay(1000) }
                             }
                         }
                     }

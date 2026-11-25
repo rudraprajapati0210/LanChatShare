@@ -55,6 +55,7 @@ import java.io.IOException
         val state = when (row.state) {
             "offered" -> if (row.outgoing) "Waiting for acceptance" else "Ready to receive"
             "active" -> "Transferring"
+            "retrying" -> "Reconnecting · resuming at " + android.text.format.Formatter.formatFileSize(context,row.offset)
             "done" -> if (row.outgoing) "Delivered" else "Received"
             "failed" -> "Transfer interrupted"
             "invalid" -> "File verification failed"
@@ -62,7 +63,7 @@ import java.io.IOException
             else -> row.state.replaceFirstChar { it.uppercase() }
         }
         Text(state + " · " + android.text.format.Formatter.formatFileSize(context, row.size), style = MaterialTheme.typography.labelMedium)
-        if (row.state == "active" || row.state == "paused") {
+        if (row.state in listOf("active","paused","retrying")) {
             val fraction = { if (row.size == 0L) 0f else (row.offset.toDouble() / row.size).toFloat().coerceIn(0f, 1f) }
             if (!preview && row.state == "active" && android.animation.ValueAnimator.areAnimatorsEnabled())
                 LinearWavyProgressIndicator(progress = fraction, modifier = Modifier.fillMaxWidth())
@@ -76,7 +77,7 @@ import java.io.IOException
         (meter[row.meterKey()] ?: finished)?.let { Text(listOfNotNull(it.path,it.label(row.state=="done")).joinToString(" · "),style=MaterialTheme.typography.labelSmall) }
         val actions = when (row.state) {
             "offered" -> if (!row.outgoing) listOf("Accept" to "active", "Decline" to "declined") else emptyList()
-            "active" -> listOf("Pause" to "paused")
+            "active", "retrying" -> listOf("Pause" to "paused")
             "paused" -> listOf("Resume" to "active")
             "failed", "storage", "invalid" -> listOf("Retry" to "active")
             else -> emptyList()
@@ -123,7 +124,7 @@ import java.io.IOException
             item { NotificationAccess() }
             if (transfers.isEmpty()) item { Text("Your first transfer will appear here.") }
             val sections = transfers.groupBy { row -> when (row.state) {
-                "active", "paused", "failed", "storage", "invalid" -> "In progress"
+                "active", "retrying", "paused", "failed", "storage", "invalid" -> "In progress"
                 "offered" -> "Queued"
                 else -> "History"
             } }

@@ -1,5 +1,11 @@
 # LanChatShare progress
 
+## Range integrity and chat latency
+
+New peers negotiate CRC32-framed binary ranges over authenticated HTTP. Each block is checked before writing, the verified prefix is synced before Room advances, and final SHA-256 gates publication. Existing peers still use raw ranges and final SHA-256. Ten seconds of idle network input moves a download to the visible reconnecting state. The foreground transfer job retries from disk. Unit tests cover damaged and truncated frames, continuing progress and idle timeout.
+
+The opt-in 4 MiB range trial completed 10, 30 and 100 MB in 10.396, 27.297 and 85.455 seconds over virtual Wi-Fi. Loaded chat receipt p95 was 3,464, 3,726 and 2,589 ms, versus 572, 552 and 183 ms on the baseline. Keep the production request window at 256 KiB. The 500 MB candidate also completed with verified integrity in 514.976 seconds, but local Gradle and instrumentation competed for host resources during that run. Exclude it from speed comparisons. No physical radio or 2 GB heap measurement yet. Use the test runner's WindowBytes parameter to reproduce window experiments. Next: confirm disconnect/restart and durable resume on Android, finish the 1 GB test and validate the benchmark Settings flow.
+
 ## Direct-link comparison
 
 README documents a two-phone router/hotspot comparison, Android permission and radio limits, and the proposed authenticated upgrade and fallback. Automatic Turbo is pending results from physical phones. The active engineering task is verifying framed ranges, interrupted downloads and concurrent chat latency.

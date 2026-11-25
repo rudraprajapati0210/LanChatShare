@@ -102,7 +102,7 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
                 "file.grant" -> {
                     val row = trust.transfers.dao.get(peer.id, false, event.id)
                     val token = event.token
-                    if (row?.pin == peer.pin && row.state == "active" && token != null && fetch != null && downloads[row.id]?.isActive != true) {
+                    if (row?.pin == peer.pin && row.state in listOf("active","retrying") && token != null && fetch != null && downloads[row.id]?.isActive != true) {
                         downloads.entries.removeAll { it.value.isCompleted }
                         downloads[row.id] = launch { fetch(row, token) }
                     }

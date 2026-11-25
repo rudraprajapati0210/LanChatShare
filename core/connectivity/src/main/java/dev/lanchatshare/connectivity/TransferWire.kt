@@ -2,7 +2,6 @@ package dev.lanchatshare.connectivity
 
 import io.ktor.client.HttpClient
 import io.ktor.client.statement.*
-import io.ktor.utils.io.readFully
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.response.*
@@ -19,13 +18,30 @@ internal fun Route.fileRanges(files: Transfers) {
         val auth = call.request.headers[HttpHeaders.Authorization].orEmpty()
         val row = if (auth.startsWith("Bearer ")) files.dao.granted(call.parameters["id"].orEmpty(), auth.removePrefix("Bearer ")) else null
         if (row == null) { call.respond(HttpStatusCode.Forbidden); return@get }
+        val streamed = call.request.headers[HttpHeaders.Accept] == RANGE_FORMAT
+        val limit = if (streamed) WINDOW_BYTES else RANGE_BLOCK
         val match = Regex("bytes=([0-9]+)-([0-9]+)").matchEntire(call.request.headers[HttpHeaders.Range].orEmpty())
         val start = match?.groupValues?.get(1)?.toLongOrNull() ?: -1
         val end = match?.groupValues?.get(2)?.toLongOrNull() ?: -1
-        if (start < 0 || end < start || end >= row.size || end - start >= RANGE_BLOCK) {
+        if (start < 0 || end < start || end >= row.size || end - start >= limit) {
             call.respond(HttpStatusCode.RequestedRangeNotSatisfiable); return@get
         }
         files.duringTransfer {
+            if (streamed) {
+                val length = end - start + 1
+                call.response.headers.append(HttpHeaders.ContentRange, "bytes $start-$end/${row.size}")
+                call.respondOutputStream(ContentType.parse(RANGE_FORMAT), HttpStatusCode.PartialContent, encodedSize(length)) {
+                    val sink = this
+                    withContext(Dispatchers.IO) {
+                        RandomAccessFile(files.file(row),"r").use { source ->
+                            source.seek(start)
+                            writeBlocks(source,sink,length) { files.dao.granted(row.id,auth.removePrefix("Bearer ")) != null }
+                        }
+                    }
+                }
+                files.dao.progress(row.peer,true,row.id,end+1)
+                return@duringTransfer
+            }
             val bytes = withContext(Dispatchers.IO) {
                 RandomAccessFile(files.file(row), "r").use { file ->
                     file.seek(start)
@@ -39,7 +55,14 @@ internal fun Route.fileRanges(files: Transfers) {
     }
 }
 
-internal suspend fun Transfers.receive(row: Transfer, client: HttpClient, origin: String, token: String) = withContext(Dispatchers.IO) {
+internal suspend fun Transfers.receive(
+    row: Transfer,
+    client: HttpClient,
+    origin: String,
+    token: String,
+    preferredWindow: Int = RANGE_BLOCK,
+) = withContext(Dispatchers.IO) {
+    require(preferredWindow in RANGE_BLOCK..WINDOW_BYTES && preferredWindow % RANGE_BLOCK == 0)
     val lock = downloadLock[(row.id.hashCode() and Int.MAX_VALUE) % downloadLock.size]
     lock.lock()
     try {
@@ -48,6 +71,7 @@ internal suspend fun Transfers.receive(row: Transfer, client: HttpClient, origin
             target.parentFile!!.mkdirs()
             val part = File(target.path + ".partial")
             suspend fun active() = dao.get(row.peer, false, row.id)?.let { it.pin == row.pin && it.state == "active" } == true
+            dao.change(row.peer,false,row.id,"retrying","active")
             if (!active()) return@duringTransfer true
             if (!target.exists()) {
                 RandomAccessFile(part, "rw").use { out ->
@@ -60,26 +84,60 @@ internal suspend fun Transfers.receive(row: Transfer, client: HttpClient, origin
                         dao.change(row.peer, false, row.id, "active", "storage")
                         return@duringTransfer true
                     }
+                    val buffer = ByteArray(RANGE_BLOCK)
+                    var window = RANGE_BLOCK // First request also negotiates compatibility with older peers.
                     while (start < row.size && active()) {
-                        val end = start + minOf(row.size - start, RANGE_BLOCK.toLong()) - 1
-                        val bytes = try {
-                            withTimeout(30000) {
+                        val begin = start
+                        val length = minOf(row.size-begin,window.toLong())
+                        val end = begin + length - 1
+                        var diskError = false
+                        try {
+                            val allowed = watchRange { heartbeat ->
                                 client.prepareGet("$origin/v1/files/${row.id}") {
-                                    header(HttpHeaders.Authorization, "Bearer $token")
-                                    header(HttpHeaders.Range, "bytes=$start-$end")
+                                    header(HttpHeaders.Authorization,"Bearer $token")
+                                    header(HttpHeaders.Range,"bytes=$begin-$end")
+                                    header(HttpHeaders.Accept,RANGE_FORMAT)
                                 }.execute { response ->
-                                    if (response.status == HttpStatusCode.Forbidden) return@execute null
+                                    if (response.status == HttpStatusCode.Forbidden) return@execute false
+                                    val checked = response.headers[HttpHeaders.ContentType]?.substringBefore(';') == RANGE_FORMAT
                                     check(response.status == HttpStatusCode.PartialContent &&
-                                        response.headers[HttpHeaders.ContentRange] == "bytes $start-$end/${row.size}" &&
-                                        response.headers[HttpHeaders.ContentLength]?.toLongOrNull() == end - start + 1)
-                                    ByteArray((end - start + 1).toInt()).also { response.bodyAsChannel().readFully(it) }
+                                        response.headers[HttpHeaders.ContentRange] == "bytes $begin-$end/${row.size}" &&
+                                        response.headers[HttpHeaders.ContentLength]?.toLongOrNull() == if (checked) encodedSize(length) else length)
+                                    val channel = response.bodyAsChannel()
+                                    while (start <= end) {
+                                        val n = minOf(end-start+1,buffer.size.toLong()).toInt()
+                                        channel.readBlock(buffer,n,checked,heartbeat)
+                                        try {
+                                            out.seek(start); out.write(buffer,0,n); start += n
+                                            if (start > end || start % (4L*RANGE_BLOCK) == 0L) {
+                                                out.fd.sync()
+                                                dao.progress(row.peer,false,row.id,start)
+                                                if (!active()) return@execute false
+                                            }
+                                        } catch (e: java.io.IOException) { diskError = true; throw e }
+                                        heartbeat()
+                                    }
+                                    window = if (checked) preferredWindow else RANGE_BLOCK
+                                    true
                                 }
                             }
-                        } catch (_: java.io.IOException) { return@duringTransfer false }
-                        if (bytes == null) return@duringTransfer true
-                        out.seek(start); out.write(bytes); out.fd.sync()
-                        start = end + 1
-                        dao.progress(row.peer, false, row.id, start)
+                            if (!allowed) {
+                                if (!active()) return@duringTransfer true
+                                dao.change(row.peer, false, row.id, "active", "retrying")
+                                return@duringTransfer false
+                            }
+                        } catch (e: ChunkMismatch) {
+                            dao.change(row.peer,false,row.id,"active","invalid")
+                            return@duringTransfer true
+                        } catch (e: java.io.IOException) {
+                            if (diskError) throw e
+                            dao.change(row.peer,false,row.id,"active","retrying")
+                            android.util.Log.i("LanChatShare","Range interrupted at $start of ${row.size}: " + e.javaClass.simpleName)
+                            return@duringTransfer false
+                        } catch (e: kotlinx.coroutines.channels.ClosedReceiveChannelException) {
+                            dao.change(row.peer,false,row.id,"active","retrying")
+                            return@duringTransfer false
+                        }
                     }
                 }
                 if (!active()) return@duringTransfer true
@@ -111,7 +169,7 @@ internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files
             "active" -> "file.grant"
             else -> null
         } else when (row.state) {
-            "active" -> "file.want"
+            "active", "retrying" -> "file.want"
             "done" -> "file.saved"
             "declined" -> "file.decline"
             else -> null

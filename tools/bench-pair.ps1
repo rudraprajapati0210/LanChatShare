@@ -2,6 +2,7 @@ param(
     [string]$Sender = 'emulator-5554',
     [string]$Receiver = 'emulator-5556',
     [string]$Sizes = '10,30,100,500,1000',
+    [ValidateSet(262144,524288,1048576,2097152,4194304)][int]$WindowBytes = 262144,
     [string]$Output = (Join-Path $env:TEMP ('lcs-benchmark-' + (Get-Date -Format yyyyMMdd-HHmmss)))
 )
 $ErrorActionPreference = 'Stop'
@@ -37,7 +38,7 @@ try {
         if ($server.HasExited) { throw 'Sender stopped before listener started' }
         Start-Sleep 1
     }
-    & $adb -s $Receiver shell am instrument -w -e class $testClass -e role receive -e pin $pins[$Sender] -e sizes $Sizes -e host $address $runner | Tee-Object (Join-Path $Output 'receiver.txt')
+    & $adb -s $Receiver shell am instrument -w -e class $testClass -e role receive -e pin $pins[$Sender] -e sizes $Sizes -e windowBytes $WindowBytes -e host $address $runner | Tee-Object (Join-Path $Output 'receiver.txt')
     if (!(Get-Content (Join-Path $Output 'receiver.txt') | Select-String 'OK \(1 test\)')) { throw 'Receiver failed; see traces' }
     if (!$server.WaitForExit(15000)) { throw 'Sender missing final receipt' }
 } finally {
