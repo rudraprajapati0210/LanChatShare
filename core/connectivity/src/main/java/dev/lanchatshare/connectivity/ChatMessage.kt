@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 @Entity(tableName = "messages", primaryKeys = ["peerId", "outgoing", "id"],
     indices = [Index(value = ["peerId", "time"])])
 data class ChatMessage(val peerId: String, val outgoing: Boolean, val id: String,
-    val text: String, val time: Long, val delivered: Boolean)
+    val text: String, val time: Long, val delivered: Boolean, @ColumnInfo(defaultValue = "0") val attachment: Boolean = false)
 
 @Dao
 internal interface MessageDao {
@@ -19,7 +19,7 @@ internal interface MessageDao {
     @Query("SELECT * FROM messages WHERE peerId = :peer ORDER BY time, rowid")
     fun conversation(peer: String): Flow<List<ChatMessage>>
 
-    @Query("SELECT * FROM messages WHERE peerId = :peer AND outgoing = 1 AND delivered = 0 ORDER BY time, rowid LIMIT 1")
+    @Query("SELECT * FROM messages WHERE peerId = :peer AND outgoing = 1 AND delivered = 0 AND attachment = 0 ORDER BY time, rowid LIMIT 1")
     fun next(peer: String): Flow<ChatMessage?>
 
     @Query("UPDATE messages SET delivered = 1 WHERE peerId = :peer AND id = :id AND outgoing = 1")

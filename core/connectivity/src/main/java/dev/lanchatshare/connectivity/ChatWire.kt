@@ -14,7 +14,8 @@ import java.util.UUID
 
 @Serializable
 internal data class ChatFrame(val type: String, val v: Int = 1, val id: String = "", val text: String = "",
-    val key: String = "", val proof: String = "", val token: String? = null, val colour: Int = 0)
+    val key: String = "", val proof: String = "", val token: String? = null, val colour: Int = 0,
+    val size: Long = 0, val hash: String = "", val mime: String = "")
 
 private val wire = Json { ignoreUnknownKeys = true }
 private val b64 = Base64.getEncoder()
@@ -57,8 +58,11 @@ internal suspend fun WebSocketSession.authenticateOutgoing(local: String, peer: 
     require(ready.type == "ready" && ready.id == peer.id)
 }
 
-internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore, profile: Flow<Profile>) = coroutineScope {
+internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore, profile: Flow<Profile>,
+    fetch: (suspend (Transfer, String) -> Unit)? = null) = coroutineScope {
     val ws = this@chat
+    val offers = launch { ws.announceTransfers(peer, trust.transfers) }
+    val downloads = mutableMapOf<String, Job>()
     val sender = launch {
         while (isActive) {
             val next = trust.messages.next(peer.id).filterNotNull().first()
@@ -82,6 +86,24 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
         while (isActive) {
             val event = ws.read()
             when (event.type) {
+                "file.offer" -> trust.transfers.offer(peer, event)
+                "file.want", "file.decline" -> {
+                    val row = trust.transfers.dao.get(peer.id, true, event.id)
+                    if (row?.pin == peer.pin) {
+                        if (event.type == "file.decline") trust.transfers.dao.change(peer.id, true, row.id, "offered", "declined")
+                        else if (row.state == "offered") trust.transfers.dao.change(peer.id, true, row.id, "offered", "active")
+                        else if (row.state == "active") ws.write(ChatFrame("file.grant", id = row.id, token = row.token))
+                    }
+                }
+                "file.saved" -> trust.transfers.receipt(peer, event.id)
+                "file.grant" -> {
+                    val row = trust.transfers.dao.get(peer.id, false, event.id)
+                    val token = event.token
+                    if (row?.pin == peer.pin && row.state == "active" && token != null && fetch != null && downloads[row.id]?.isActive != true) {
+                        downloads.entries.removeAll { it.value.isCompleted }
+                        downloads[row.id] = launch { fetch(row, token) }
+                    }
+                }
                 "text" -> {
                     require(UUID.fromString(event.id).toString() == event.id && event.text.isNotBlank() && event.text.length <= 4096)
                     trust.saveIncoming(peer, ChatMessage(peer.id, false, event.id, event.text, System.currentTimeMillis(), true))
@@ -95,5 +117,5 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
                 else -> error("Unsupported chat event")
             }
         }
-    } finally { sender.cancel(); updates.cancel(); pins.cancel() }
+    } finally { offers.cancel(); downloads.values.forEach { it.cancel() }; sender.cancel(); updates.cancel(); pins.cancel() }
 }

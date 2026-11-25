@@ -3,6 +3,8 @@ package dev.lanchatshare.connectivity
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.lanchatshare.data.Profile
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
+import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -30,7 +32,7 @@ class ChatTransportTest {
         val aTls = certify(a.id, keysA.private, rootA, transportKey(store, a.id + ".issuer"), transportKey(store, a.id + ".tls"), now)
         val trusted = java.util.concurrent.atomic.AtomicReference(mapOf(a.id to pin(keysA.public)))
         val upgrades = java.util.concurrent.atomic.AtomicInteger()
-        val server = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls, trusted::get)) {
+        val server = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls, trusted::get), recipient.transfers) {
             upgrades.incrementAndGet()
             chat(authenticateIncoming(b.id, recipient), recipient, flowOf(b))
         }
@@ -52,7 +54,7 @@ class ChatTransportTest {
                 val session = launch(Dispatchers.IO) {
                     client.webSocket(urlString = url) {
                         authenticateOutgoing(a.id, peerB, keysA, null)
-                        chat(peerB, sender, flowOf(a))
+                        chat(peerB, sender, flowOf(a)) { row, token -> sender.transfers.receive(row, client, "https://127.0.0.1:$port", token) }
                     }
                 }
                 try {
@@ -62,6 +64,22 @@ class ChatTransportTest {
                         recipient.enqueue(a.id, "Got it")
                         sender.conversation(b.id).first { it.any { msg -> !msg.outgoing && msg.text == "Got it" } }
                         recipient.conversation(a.id).first { it.any { msg -> msg.outgoing && msg.delivered } }
+                        val bytes = ByteArray(RANGE_BLOCK * 3 + 177) { (it * 11).toByte() }
+                        recipient.transfers.stage(listOf(recipient.dao.find(a.id)!!), "Test photo.jpg", "image/jpeg") { bytes.inputStream() }
+                        val offer = sender.transfers.all.first { it.isNotEmpty() }.single()
+                        val source = recipient.transfers.all.first().single()
+                        val denied = client.get("https://127.0.0.1:$port/v1/files/${offer.id}") {
+                            header(HttpHeaders.Range, "bytes=0-31"); header(HttpHeaders.Authorization, "Bearer ${source.token}")
+                        }
+                        assertEquals(HttpStatusCode.Forbidden, denied.status)
+                        val target = sender.transfers.file(offer)
+                        target.parentFile!!.mkdirs()
+                        java.io.File(target.path + ".partial").writeBytes(bytes.copyOf(RANGE_BLOCK))
+                        sender.transfers.action(offer, "active")
+                        recipient.transfers.all.first { it.single().state == "done" }
+                        assertArrayEquals(bytes, target.readBytes())
+                        assertTrue(recipient.conversation(a.id).first().last().delivered)
+                        target.delete(); recipient.transfers.file(source).delete()
                     }
                 } finally { session.cancelAndJoin() }
             }
@@ -70,7 +88,7 @@ class ChatTransportTest {
             recipient.forget(recipient.dao.find(a.id)!!)
             trusted.set(recipient.peers.first().associate { it.id to it.pin })
             assertNull(recipient.dao.pin(a.id))
-            assertEquals(2, recipient.conversation(a.id).first().size)
+            assertEquals(3, recipient.conversation(a.id).first().size)
             chatClient(peerB, aTls).use { client ->
                 val failure = runCatching { withTimeout(10000) { client.webSocket(urlString = url) {} } }.exceptionOrNull()
                 assertNotNull(failure)

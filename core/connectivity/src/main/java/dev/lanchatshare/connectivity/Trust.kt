@@ -25,13 +25,15 @@ data class TrustedPeer(@PrimaryKey val id: String, val name: String, val colour:
     suspend fun forget(id: String, pin: String): Int
     @Upsert suspend fun save(peer: TrustedPeer)
 }
-@Database(entities = [TrustedPeer::class, ChatMessage::class], version = 3, autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)])
+@Database(entities = [TrustedPeer::class, ChatMessage::class, Transfer::class], version = 4, autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)])
 internal abstract class TrustDatabase : RoomDatabase() {
+    abstract fun transfers(): TransferDao
     abstract fun messages(): MessageDao
     abstract fun peers(): PeerDao
 }
 class TrustStore(context: Context, databaseName: String = "peers.db") {
     private val database = Room.databaseBuilder(context.applicationContext, TrustDatabase::class.java, databaseName).build()
+    val transfers = Transfers(context.applicationContext, database)
     internal fun close() = database.close()
     internal val dao = database.peers()
     internal val messages = database.messages()
@@ -48,6 +50,7 @@ class TrustStore(context: Context, databaseName: String = "peers.db") {
     suspend fun forget(peer: TrustedPeer) {
         database.withTransaction {
             if (dao.forget(peer.id, peer.pin) == 1) {
+                database.transfers().revoke(peer.id)
                 messages.deletePending(peer.id)
                 synchronized(this@TrustStore) {
                     tickets.remove(peer.id)

@@ -46,7 +46,7 @@ internal fun chatClient(peer: TrustedPeer, local: Credentials) = HttpClient(CIO)
     install(io.ktor.client.plugins.websocket.WebSockets) { maxFrameSize = 32768; pingIntervalMillis = 10000 }
 }
 
-internal fun chatServer(hosts: List<String>, port: Int, tls: SSLContext, session: suspend WebSocketSession.() -> Unit) =
+internal fun chatServer(hosts: List<String>, port: Int, tls: SSLContext, files: Transfers? = null, session: suspend WebSocketSession.(String) -> Unit) =
     embeddedServer(Netty, configure = {
         hosts.forEach { address -> connector { host = address; this.port = port } }
         connectionGroupSize = 1; workerGroupSize = 2; callGroupSize = 2
@@ -62,7 +62,10 @@ internal fun chatServer(hosts: List<String>, port: Int, tls: SSLContext, session
         }
     }) {
         install(io.ktor.server.websocket.WebSockets) { maxFrameSize = 32768; pingPeriod = 10.seconds; timeout = 20.seconds }
-        routing { webSocket("/v1/chat") { session() } }
+        routing {
+            if (files != null) fileRanges(files)
+            webSocket("/v1/chat") { session(call.request.local.remoteAddress) }
+        }
     }
 
 class LanChat(private val context: Context, private val trust: TrustStore, profiles: ProfileRepository) {
@@ -107,11 +110,14 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         val manager = context.getSystemService(android.net.ConnectivityManager::class.java)
         val wifi = links.map { it.network }.distinct().singleOrNull()
         val previousNetwork = manager.boundNetworkForProcess
-        val server = chatServer(links.map { requireNotNull(it.address.hostAddress) }.distinct(), LAN_PORT, tls) {
+        val server = chatServer(links.map { requireNotNull(it.address.hostAddress) }.distinct(), LAN_PORT, tls, trust.transfers) { address ->
             if (challenges.incrementAndGet() > 12) { challenges.decrementAndGet(); return@chatServer }
             val peer = try { withTimeout(10000) { authenticateIncoming(local.id, trust) } }
                 finally { challenges.decrementAndGet() }
-            exchange(this, peer)
+            chatClient(peer, credentials).use { http ->
+                val host = if (address.contains(':')) "[" + address.replace("%", "%25") + "]" else address
+                exchange(this, peer, http, "https://$host:$LAN_PORT")
+            }
         }
         try {
             // Keep an internet-less Wi-Fi network selected even with mobile data enabled.
@@ -141,7 +147,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                                                 authenticateOutgoing(local.id, peer, identityKeys(), token)
                                                 trust.completeOutgoing(peer.id, token)
                                             }
-                                            exchange(this, peer)
+                                            exchange(this, peer, client, "https://$literal:$port")
                                         }
                                     }
                                     break
@@ -164,7 +170,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         }
     }
 
-    private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer) {
+    private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer, client: HttpClient, origin: String) {
         fun change(delta: Int) = synchronized(sessions) {
             val count = (sessions[peer.id] ?: 0) + delta
             if (count > 0) sessions[peer.id] = count else sessions.remove(peer.id)
@@ -172,7 +178,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         }
         change(1)
         attempts.update { it - peer.id }
-        try { socket.chat(peer, trust, profile) } finally { change(-1) }
+        try { socket.chat(peer, trust, profile) { row, token -> trust.transfers.receive(row, client, origin, token) } } finally { change(-1) }
     }
 }
 
