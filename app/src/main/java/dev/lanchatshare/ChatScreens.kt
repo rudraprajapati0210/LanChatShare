@@ -35,12 +35,11 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     var granted by remember { mutableStateOf(allowed()) }
     var denied by rememberSaveable { mutableStateOf(false) }
     val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it; denied = !it }
-    LifecycleResumeEffect(Unit) {
+    LifecycleResumeEffect(granted) {
         granted = allowed()
         if (granted) context.startForegroundService(Intent(context, ChatService::class.java))
         onPauseOrDispose {}
     }
-    LaunchedEffect(granted) { if (granted) context.startForegroundService(Intent(context, ChatService::class.java)) }
     if (!granted) Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Text("Allow local network access to exchange messages with your paired phones.")
         TextButton(onClick = {
@@ -73,10 +72,11 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     }
 }
 
-@Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat) {
+@Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat, networkSettings: () -> Unit) {
     val history by remember(peer.id) { trust.conversation(peer.id) }.collectAsStateWithLifecycle(emptyList())
     val online by chat.online.collectAsStateWithLifecycle()
     val network by chat.networkStatus.collectAsStateWithLifecycle()
+    val diagnostics by chat.diagnostics.collectAsStateWithLifecycle()
     var draft by rememberSaveable(peer.id) { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
@@ -85,6 +85,10 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Text(if (peer.id in online) "Connected over Wi-Fi" else if (network == "On the local network") "Waiting for peer · messages will queue" else network,
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (peer.id !in online && diagnostics[peer.id] != null) {
+            Text(diagnostics.getValue(peer.id), style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = networkSettings) { Text("Network and hotspot") }
+        }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = scroll, reverseLayout = true,
             contentPadding = PaddingValues(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(history.asReversed(), key = { it.id + it.outgoing }) { message ->

@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.websockets)
+    implementation(libs.x509)
     implementation(libs.json)
     implementation(libs.room)
     ksp(libs.roomCompiler)
@@ -29,6 +30,7 @@ dependencies {
     androidTestImplementation(libs.ext)
     testImplementation(libs.junit)
 }
+
 
 
 

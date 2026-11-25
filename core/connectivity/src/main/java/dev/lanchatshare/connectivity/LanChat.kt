@@ -27,13 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.*
 import kotlin.time.Duration.Companion.seconds
 
-internal fun serverTls(): SSLContext {
-    identityKeys()
-    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-    val keys = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply { init(store, null) }
-    return SSLContext.getInstance("TLS").apply { init(keys.keyManagers, null, null) }
-}
-
 internal fun chatClient(pin: String) = HttpClient(CIO) {
     followRedirects = false
     engine {
@@ -44,9 +37,7 @@ internal fun chatClient(pin: String) = HttpClient(CIO) {
                 override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
                 override fun checkClientTrusted(chain: Array<X509Certificate>, auth: String) { throw CertificateException() }
                 override fun checkServerTrusted(chain: Array<X509Certificate>, auth: String) {
-                    val leaf = chain.firstOrNull() ?: throw CertificateException("Missing peer certificate")
-                    if (Base64.getEncoder().encodeToString(digest(leaf.publicKey.encoded)) != pin)
-                        throw CertificateException("Peer key changed")
+                    verifyServerChain(chain, pin)
                 }
             }
         }
@@ -79,6 +70,8 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
     private val sessions = mutableMapOf<String, Int>()
     private val connected = MutableStateFlow(emptySet<String>())
     val online = connected.asStateFlow()
+    private val attempts = MutableStateFlow<Map<String, String>>(emptyMap())
+    val diagnostics = attempts.asStateFlow()
     private data class Seen(val host: InetAddress, val port: Int, val until: Long)
 
     suspend fun run(): Unit = withContext(Dispatchers.IO) {
@@ -105,6 +98,9 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         val peers = trust.peers.stateIn(this, SharingStarted.Eagerly, emptyList())
         val pending = ConcurrentHashMap.newKeySet<String>()
         val challenges = AtomicInteger()
+        val manager = context.getSystemService(android.net.ConnectivityManager::class.java)
+        val wifi = links.map { it.network }.distinct().singleOrNull()
+        val previousNetwork = manager.boundNetworkForProcess
         val server = chatServer(links.map { requireNotNull(it.address.hostAddress) }.distinct(), LAN_PORT, tls) {
             if (challenges.incrementAndGet() > 12) { challenges.decrementAndGet(); return@chatServer }
             val peer = try { withTimeout(10000) { authenticateIncoming(local.id, trust) } }
@@ -112,6 +108,8 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
             exchange(this, peer)
         }
         try {
+            // Keep an internet-less Wi-Fi network selected even with mobile data enabled.
+            if (wifi != null) check(manager.bindProcessToNetwork(wifi))
             server.start(wait = false)
             status.value = "On the local network"
             launch { LanDiscovery(context, local, links) { id, ip, port ->
@@ -133,21 +131,31 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                                     chatClient(peer.pin).use { client ->
                                         client.webSocket(urlString = "wss://$literal:$port/v1/chat") {
                                             withTimeout(10000) {
-                                                authenticateOutgoing(local.id, peer, identityKeys(), trust.takeOutgoing(peer.id)?.first)
+                                                val token = trust.pendingToken(peer.id)
+                                                authenticateOutgoing(local.id, peer, identityKeys(), token)
+                                                trust.completeOutgoing(peer.id, token)
                                             }
                                             exchange(this, peer)
                                         }
                                     }
                                     break
                                 } catch (e: CancellationException) { if (!isActive) throw e }
-                                catch (_: Exception) { /* Try the next signed or discovered LAN address. */ }
+                                catch (e: Exception) {
+                                    val badPin = generateSequence<Throwable>(e) { it.cause }.any { it is CertificateException }
+                                    attempts.update { it + (peer.id to if (badPin) "Device key changed. Verify this phone again in Nearby."
+                                        else "No reply over Wi-Fi. Open LanChatShare on both phones. If this router isolates devices, try a phone hotspot.") }
+                                }
                             }
                         } finally { pending.remove(peer.id) }
                     }
                 }
                 delay(3500)
             }
-        } finally { server.stop(0, 1000) }
+        } finally {
+            try { server.stop(0, 1000) } finally {
+                if (wifi != null && manager.boundNetworkForProcess == wifi) manager.bindProcessToNetwork(previousNetwork)
+            }
+        }
     }
 
     private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer) {
@@ -157,7 +165,9 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
             connected.value = sessions.keys.toSet()
         }
         change(1)
+        attempts.update { it - peer.id }
         try { socket.chat(peer, trust, profile) } finally { change(-1) }
     }
 }
+
 

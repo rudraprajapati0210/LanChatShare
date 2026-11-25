@@ -11,7 +11,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.*
 
-internal data class LanLink(val address: InetAddress, val prefix: Int, val name: String, val broadcast: InetAddress?) {
+internal data class LanLink(val address: InetAddress, val prefix: Int, val name: String, val broadcast: InetAddress?, val network: Network?) {
     fun contains(other: InetAddress) = IpPrefix(address, prefix).contains(other)
 }
 @Suppress("DEPRECATION")
@@ -20,14 +20,14 @@ internal fun lanLinks(context: Context): List<LanLink> {
     val wifi = manager.allNetworks.filter {
         val caps = manager.getNetworkCapabilities(it)
         caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-    }.mapNotNull { manager.getLinkProperties(it)?.interfaceName }.toSet()
+    }.mapNotNull { network -> manager.getLinkProperties(network)?.interfaceName?.let { it to network } }.toMap()
     val hotspot = Regex("(ap|wlan|swlan|softap|sap|wifi|p2p)[a-z0-9_.-]*", RegexOption.IGNORE_CASE)
     return NetworkInterface.getNetworkInterfaces()?.toList().orEmpty().filter { device ->
         device.isUp && !device.isLoopback && (device.name in wifi || hotspot.matches(device.name))
     }.flatMap { device -> device.interfaceAddresses.mapNotNull { info ->
         val ip = info.address ?: return@mapNotNull null
         if (ip.isLoopbackAddress || ip.isMulticastAddress || ip.isAnyLocalAddress) null
-        else LanLink(ip, info.networkPrefixLength.toInt(), device.name, info.broadcast)
+        else LanLink(ip, info.networkPrefixLength.toInt(), device.name, info.broadcast, wifi[device.name])
     } }.sortedBy { it.address.hostAddress }
 }
 

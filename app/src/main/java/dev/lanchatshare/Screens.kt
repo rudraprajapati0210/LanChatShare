@@ -105,7 +105,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (page) {
                         "Nearby" -> NearbyScreen(profile, trust, openChat)
-                        "Conversation" -> peer?.let { Conversation(it, trust, chat) }
+                        "Conversation" -> peer?.let { Conversation(it, trust, chat) { section = "Settings"; detail = "Network and hotspot" } }
                         "Chats" -> ChatList(trusted, trust, chat, openChat) { select("Nearby") }
                         "Network and hotspot" -> NetworkSettings(chat)
                         "Profile" -> NameForm(profile, busy, failed, save)

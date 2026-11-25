@@ -63,7 +63,14 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
         while (isActive) {
             val next = trust.messages.next(peer.id).filterNotNull().first()
             ws.write(ChatFrame("text", id = next.id, text = next.text))
-            withTimeout(20000) { trust.messages.next(peer.id).first { it?.id != next.id } }
+            val acknowledged = withTimeoutOrNull(20000) {
+                trust.messages.next(peer.id).first { it?.id != next.id }
+                true
+            } ?: false
+            if (!acknowledged) {
+                ws.close(CloseReason(CloseReason.Codes.GOING_AWAY, "Delivery timed out"))
+                break
+            }
         }
     }
     val updates = launch { profile.distinctUntilChanged().collect { ws.write(ChatFrame("profile", text = it.name, colour = it.colour)) } }

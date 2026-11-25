@@ -55,6 +55,13 @@ class TrustStore(context: Context, databaseName: String = "peers.db") {
         if (ticket.until <= SystemClock.elapsedRealtime()) return null
         return ticket.bytes to ticket.routes
     }
+    @Synchronized internal fun pendingToken(id: String): ByteArray? =
+        tickets[id]?.takeIf { it.outgoing && it.until > SystemClock.elapsedRealtime() }?.bytes?.copyOf()
+
+    @Synchronized internal fun completeOutgoing(id: String, sent: ByteArray?) {
+        val ticket = tickets[id] ?: return
+        if (sent != null && ticket.outgoing && MessageDigest.isEqual(ticket.bytes, sent)) tickets.remove(id)
+    }
     @Synchronized internal fun checkHandoff(id: String, presented: ByteArray?): Boolean {
         val ticket = tickets[id]
         if (presented != null) return consume(id, presented)
