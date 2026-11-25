@@ -19,10 +19,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.net.Inet6Address
 import java.net.InetAddress
-import java.security.KeyStore
 import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
-import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.*
@@ -54,7 +52,7 @@ internal fun chatServer(hosts: List<String>, port: Int, tls: SSLContext, session
         connectionGroupSize = 1; workerGroupSize = 2; callGroupSize = 2
         enableHttp2 = false
         channelPipelineConfig = {
-            // Let Android's TLS provider sign with the non-exportable pairing key.
+            // Let Android's TLS provider sign with the non-exportable transport key.
             val engine = tls.createSSLEngine().apply {
                 useClientMode = false
                 needClientAuth = true

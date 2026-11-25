@@ -2,37 +2,29 @@ package dev.lanchatshare.connectivity
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import org.bouncycastle.asn1.x500.X500Name
-import org.bouncycastle.cert.X509v3CertificateBuilder
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
-import java.math.BigInteger
 import java.net.Socket
 import java.security.*
 import java.security.cert.CertificateException
-import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.security.spec.ECGenParameterSpec
-import java.util.*
 import javax.net.ssl.*
 
 private const val TLS_ALIAS = "lanchatshare.transport."
+
+internal fun transportKey(store: KeyStore, alias: String): KeyPair {
+    if (!store.containsAlias(alias)) {
+        val spec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY)
+            .setKeySize(2048).setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1, KeyProperties.SIGNATURE_PADDING_RSA_PSS)
+            .setDigests(KeyProperties.DIGEST_NONE, KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA384, KeyProperties.DIGEST_SHA512).build()
+        KeyPairGenerator.getInstance("RSA", "AndroidKeyStore").apply { initialize(spec); generateKeyPair() }
+    }
+    return KeyPair(store.getCertificate(alias).publicKey, store.getKey(alias, null) as PrivateKey)
+}
 
 @Synchronized internal fun deviceCredentials(id: String, now: Long = System.currentTimeMillis()): Credentials {
     val pairing = identityKeys()
     val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
     val prefix = TLS_ALIAS + now / TLS_PERIOD + "."
-    fun key(role: String): KeyPair {
-        val alias = prefix + role
-        if (!store.containsAlias(alias)) {
-            val spec = KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY)
-                .setKeySize(2048).setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1, KeyProperties.SIGNATURE_PADDING_RSA_PSS)
-                .setDigests(KeyProperties.DIGEST_NONE, KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA384, KeyProperties.DIGEST_SHA512).build()
-            KeyPairGenerator.getInstance("RSA", "AndroidKeyStore").apply { initialize(spec); generateKeyPair() }
-        }
-        return KeyPair(store.getCertificate(alias).publicKey, store.getKey(alias, null) as PrivateKey)
-    }
-    val result = certify(id, pairing.private, store.getCertificate(IDENTITY_ALIAS) as X509Certificate, key("issuer"), key("tls"), now)
+    val result = certify(id, pairing.private, store.getCertificate(IDENTITY_ALIAS) as X509Certificate, transportKey(store, prefix + "issuer"), transportKey(store, prefix + "tls"), now)
     store.aliases().toList().filter { it.startsWith(TLS_ALIAS) && !it.startsWith(prefix) }.forEach(store::deleteEntry)
     return result
 }

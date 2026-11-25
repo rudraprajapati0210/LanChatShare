@@ -26,8 +26,8 @@ class ChatTransportTest {
         val name = org.bouncycastle.asn1.x500.X500Name("CN=older-pairing-key")
         val now = System.currentTimeMillis()
         val rootA = certificate(name, name, keysA.public, keysA.private, now - 60000, now + TLS_PERIOD, null, true)
-        fun rsa() = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
-        val aTls = certify(a.id, keysA.private, rootA, rsa(), rsa(), now)
+        val store = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        val aTls = certify(a.id, keysA.private, rootA, transportKey(store, a.id + ".issuer"), transportKey(store, a.id + ".tls"), now)
         val trusted = java.util.concurrent.atomic.AtomicReference(mapOf(a.id to pin(keysA.public)))
         val upgrades = java.util.concurrent.atomic.AtomicInteger()
         val server = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls, trusted::get)) {
@@ -79,6 +79,7 @@ class ChatTransportTest {
             assertEquals(1, upgrades.get())
         } finally {
             server.stop(0, 1000); sender.close(); recipient.close()
+            store.deleteEntry(a.id + ".issuer"); store.deleteEntry(a.id + ".tls")
             context.deleteDatabase(a.id); context.deleteDatabase(b.id)
         }
         Unit
