@@ -3,6 +3,8 @@ package dev.lanchatshare.connectivity
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.lanchatshare.data.Profile
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.plugins.HttpSend
+import io.ktor.client.plugins.plugin
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.websocket.*
@@ -103,6 +105,54 @@ class ChatTransportTest {
                 assertFalse(failure is TimeoutCancellationException)
             }
             assertEquals(1, upgrades.get())
+            // Reauthorize the test peer for an independent transfer after the revocation test.
+            recipient.dao.save(TrustedPeer(a.id, a.name, 1, pin(keysA.public)))
+            trusted.set(mapOf(a.id to pin(keysA.public)))
+            val source = Transfer(a.id, true, UUID.randomUUID().toString(), "recovery.bin",
+                "application/octet-stream", 12L * 1024 * 1024, "", pin(keysA.public),
+                UUID.randomUUID().toString(), "active", 0, now)
+            val payload = recipient.transfers.file(source)
+            payload.parentFile!!.mkdirs()
+            java.io.RandomAccessFile(payload, "rw").use { it.setLength(source.size) }
+            val expected = source.copy(hash = fileHash(payload.inputStream()))
+            val download = expected.copy(peer = b.id, outgoing = false, pin = peerB.pin)
+            val destination = sender.transfers.file(download)
+            try {
+                recipient.transfers.dao.insert(expected)
+                sender.transfers.dao.insert(download)
+                chatClient(peerB, aTls).use { http ->
+                    withTimeout(90000) {
+                        val first = async(Dispatchers.IO) {
+                            sender.transfers.receive(download, http, "https://127.0.0.1:$port", source.token)
+                        }
+                        sender.transfers.forPeer(peerB).first { rows -> rows.any { it.id == download.id && it.offset > 0 } }
+                        server.stop(0, 0)
+                        assertFalse(first.await())
+                        val interrupted = requireNotNull(sender.transfers.dao.get(b.id, false, download.id))
+                        assertEquals("retrying", interrupted.state)
+                        assertTrue(interrupted.offset in RANGE_BLOCK.toLong() until source.size)
+                        assertFalse(destination.exists())
+                        val replacement = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls, trusted::get), recipient.transfers) {}
+                        try {
+                            replacement.start(false)
+                            val newPort = replacement.engine.resolvedConnectors().first().port
+                            val firstRange = java.util.concurrent.atomic.AtomicReference<String>()
+                            http.plugin(HttpSend).intercept { request ->
+                                firstRange.compareAndSet(null, request.headers[HttpHeaders.Range])
+                                execute(request)
+                            }
+                            assertTrue(sender.transfers.receive(interrupted, http, "https://127.0.0.1:$newPort", source.token))
+                            assertTrue(firstRange.get().startsWith("bytes=${interrupted.offset}-"))
+                            assertEquals(expected.hash, fileHash(destination.inputStream()))
+                            assertEquals("done", sender.transfers.dao.get(b.id, false, download.id)?.state)
+                        } finally { replacement.stop(0, 1000) }
+                    }
+                }
+            } finally {
+                destination.delete()
+                java.io.File(destination.path + ".partial").delete()
+                payload.delete()
+            }
         } finally {
             server.stop(0, 1000); sender.close(); recipient.close()
             store.deleteEntry(a.id + ".issuer"); store.deleteEntry(a.id + ".tls")

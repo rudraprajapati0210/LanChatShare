@@ -1,5 +1,11 @@
 # LanChatShare progress
 
+## Verified checkpoint
+
+The two-emulator window experiment completed all five transfers with matching SHA-256 and sender receipts. The 1 GB file completed in 1,038.177 seconds. The 500 MB and 1 GB runs overlapped other host work and are integrity results only. The API 37 transport regression stopped the real TLS listener after a durable checkpoint, observed the retry state, then confirmed that the first request to the replacement listener started at the saved Room offset and the final SHA-256 matched. Pairing migration, rejection of wrong pins and revocation passed. Seven app instrumentation tests, five connectivity instrumentation tests and sixteen JVM tests passed. The opt-in benchmark ran separately on both emulator identities.
+
+Next: measure the shipping 256 KiB window on virtual Wi-Fi, then compare physical reports on the router and phone hotspot, including locked screens. Android 2 GB memory profiling and any decision to enable Turbo require further measurements.
+
 The foreground service and progress notification now recognize a retrying download while its peer is offline. With Stay reachable disabled and the app in the background, the Android regression confirmed that the retry notification survives, its Pause action updates Room, and the service and notification go away. The debug build, JVM suite and both background notification tests passed. Next: collect the 1 GB result and run the interrupted TLS integration test.
 
 Verified the benchmark picker through Settings → Diagnostics on API 37. The test selects a paired phone, checks available sizes and returns to Chats. During the Android share-sheet test, activity replacement briefly left no Compose root. The test now waits through that transition. All six app instrumentation tests passed. The debug APK and all 16 JVM tests passed. Next is the transport instrumentation suite and the final 1 GB digest.
