@@ -1,5 +1,13 @@
 # LanChatShare
 
+## Appearance and motion
+
+Estuary uses the original teal. Kiln pairs fired clay with peach, Blueprint pairs ink with pale slate, Orchard uses leaf and sage, Mulberry uses wine and shell, and Carbon pairs graphite with warm grey. Each palette has a dark accent and separate readable foreground. System, Light, Dark and AMOLED control the surface independently of the palette. Device colours use Android 12+ dynamic colour. Global and per-chat selections live in DataStore.
+
+The chat wallpaper is plain, lightly tinted or a low-contrast dot pattern. A contact's initial moves between the conversation list and the chat header. New list items animate into place, the Share button changes shape with a spring, and progress uses an expressive wave. Screen fades take 120–160 ms and palette changes take 180 ms. Reduce motion removes these effects; system animation removal takes precedence.
+
+Library uses a responsive file grid and a compact list. File size and direction stay visible. Open, external share and local deletion are separate actions. Deletion requires confirmation and protects payloads shared with multiple recipients.
+
 Design source of truth for the native Compose app. Token values live in [design/tokens.json](design/tokens.json). All illustrations, fonts and icons ship in the APK.
 
 ## Colour and type

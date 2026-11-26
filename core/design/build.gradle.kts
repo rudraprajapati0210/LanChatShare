@@ -13,6 +13,7 @@ android {
     buildFeatures { compose = true }
 }
 dependencies {
+    implementation(libs.store)
     implementation(platform(libs.bom))
     implementation(libs.material)
     

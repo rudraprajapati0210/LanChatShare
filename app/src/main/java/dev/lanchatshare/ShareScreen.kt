@@ -32,7 +32,7 @@ import java.io.IOException
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var problem by remember(row.id) { mutableStateOf(false) }
-    val available = row.outgoing || row.state == "done"
+    val available = row.state != "removed" && (row.outgoing || row.state == "done")
     val save = rememberLauncherForActivityResult(CreateDocument(row.mime.ifBlank { "application/octet-stream" })) { dest ->
         if (dest != null) scope.launch {
             try { withContext(Dispatchers.IO) {
@@ -66,12 +66,13 @@ import java.io.IOException
             "failed" -> "Transfer interrupted"
             "invalid" -> "File verification failed"
             "storage" -> "Free up space to receive this file"
+            "removed" -> "Local copy deleted"
             else -> row.state.replaceFirstChar { it.uppercase() }
         }
         Text(state + " · " + android.text.format.Formatter.formatFileSize(context, row.size), style = MaterialTheme.typography.labelMedium)
         if (row.state in listOf("active","paused","retrying")) {
             val fraction = { if (row.size == 0L) 0f else (row.offset.toDouble() / row.size).toFloat().coerceIn(0f, 1f) }
-            if (!preview && row.state == "active" && android.animation.ValueAnimator.areAnimatorsEnabled())
+            if (!preview && row.state == "active" && dev.lanchatshare.design.LocalAppMotion.current)
                 LinearWavyProgressIndicator(progress = fraction, modifier = Modifier.fillMaxWidth())
             else LinearProgressIndicator(progress = fraction, modifier = Modifier.fillMaxWidth())
             Text("${row.offset} / ${row.size} bytes", style = MaterialTheme.typography.labelSmall)
@@ -193,7 +194,10 @@ import java.io.IOException
                     Checkbox(checked, null); Spacer(Modifier.width(12.dp)); Text(peerLabel(peer, peers))
                 }
             }
-            item { Button(shape = RoundedCornerShape(18.dp), enabled = !sending && (selected.isNotEmpty() || text.isNotBlank()) &&
+            item {
+                val corner by androidx.compose.animation.core.animateDpAsState(if (sending) 28.dp else 16.dp,
+                    animationSpec = if (dev.lanchatshare.design.LocalAppMotion.current) androidx.compose.animation.core.spring() else androidx.compose.animation.core.snap(),label = "Send shape")
+                Button(shape = RoundedCornerShape(corner), enabled = !sending && (selected.isNotEmpty() || text.isNotBlank()) &&
                 peers.any { it.id in recipients }, onClick = {
                 val targets = peers.filter { it.id in recipients }
                 sending = true

@@ -32,6 +32,13 @@ internal abstract class TrustDatabase : RoomDatabase() {
     abstract fun peers(): PeerDao
 }
 class TrustStore(context: Context, databaseName: String = "peers.db") {
+    internal val keystrokes = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 8)
+    private val typingTimes = kotlinx.coroutines.flow.MutableStateFlow<Map<String,Long>>(emptyMap())
+    val typing: kotlinx.coroutines.flow.StateFlow<Map<String,Long>> get() = typingTimes
+    fun composing(peer: String) { keystrokes.tryEmit(peer) }
+    @Synchronized internal fun remoteTyping(peer: String, active: Boolean) {
+        typingTimes.value = if (active) typingTimes.value + (peer to SystemClock.elapsedRealtime()) else typingTimes.value - peer
+    }
     private val database = Room.databaseBuilder(context.applicationContext, TrustDatabase::class.java, databaseName).build()
     val transfers = Transfers(context.applicationContext, database)
     internal fun close() = database.close()

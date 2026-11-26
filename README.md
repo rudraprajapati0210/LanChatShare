@@ -2,6 +2,8 @@
 
 [Transfer research](docs/TRANSFER_RESEARCH.md) · [Benchmark results](docs/BENCHMARKS.md) · [Engineering decisions](docs/DECISIONS.md)
 
+[Two-phone acceptance checklist](docs/TWO_PHONE_CHECKLIST.md)
+
 Chats opens directly after the one-time name prompt. Verify a phone in Nearby, then tap its name in Chats to send text over local Wi-Fi. Both phones need this build and local network access. A previously verified phone keeps its pairing when you install the update over the earlier APK.
 
 ## Check chat on two phones
@@ -49,6 +51,14 @@ LanChatShare uses the connected-device foreground service for communication with
 - For the later motion and theme checkpoints, repeat in both light and dark mode, with large fonts and reduced motion.
 
 ## Build
+
+### Library and appearance
+
+Library indexes local transfers in Room. Filter by media type, direction, date or contact, then sort by date, size, name or type. Open a file to share it with another app or delete a completed local copy. Files sent to several people count once toward storage. Settings → Appearance previews palettes, display modes, wallpaper and reduced motion. A conversation's Chat appearance setting overrides global colours and wallpaper for that peer.
+
+### Screenshots
+
+Captured on the API 37 emulator. The picker shows the Blueprint palette in Light mode. [Appearance preview](docs/screenshots/appearance.png) · [Share hub](docs/screenshots/share.png)
 
 ### Measure transfer speed
 

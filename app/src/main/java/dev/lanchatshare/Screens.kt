@@ -2,6 +2,8 @@ package dev.lanchatshare
 
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -108,11 +110,21 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                     FirstTransferBatteryHelp(trust.transfers)
                     if (page == "Chats") NotificationAccess()
                 }
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    when (page) {
+                val move = dev.lanchatshare.design.LocalAppMotion.current
+                SharedTransitionLayout(Modifier.weight(1f).fillMaxWidth()) {
+                val shared = this
+                AnimatedContent(page,transitionSpec = {
+                    fadeIn(tween(if (move) 160 else 0)) togetherWith fadeOut(tween(if (move) 120 else 0))
+                },label = "Screen") { screen ->
+                    CompositionLocalProvider(LocalContactTransition provides if (move) ContactTransition(shared,this) else null) {
+                    when (screen) {
                         "Share files" -> ShareScreen(trusted, trust.transfers, incoming, consumed, peer?.id.takeIf { detail == "Conversation" })
                         "Nearby" -> NearbyScreen(profile, trust, openChat)
-                        "Conversation" -> peer?.let { Conversation(it, trust, chat) { section = "Settings"; detail = "Network and hotspot" } }
+                        "Conversation" -> peer?.let { contact -> dev.lanchatshare.design.LanTheme(contact.id) {
+                            Conversation(contact, trust, chat, { detail = "Chat appearance" }) { section = "Settings"; detail = "Network and hotspot" }
+                        } }
+                        "Chat appearance" -> AppearanceScreen(peerId)
+                        "Appearance" -> AppearanceScreen()
                         "Chats" -> ChatList(trusted, trust, chat, openChat) { select("Nearby") }
                         "Network and hotspot" -> NetworkSettings(chat)
                         "Profile" -> NameForm(profile, busy, failed, save)
@@ -122,6 +134,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                         "Library" -> LibraryScreen(trust.transfers,trusted)
                         "Media quality" -> QualityPicker()
                         "Settings" -> Column {
+                            TextButton(onClick = { detail = "Appearance" }) { Text("Appearance") }
                             TextButton(onClick = { detail = "Notifications" }) { Text("Notifications and reachability") }
                             TextButton(onClick = { detail = "Diagnostics" }) { Text("Diagnostics") }
                             TextButton(onClick = { detail = "Media quality" }) { Text("Media quality") }
@@ -131,15 +144,8 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                             ListItem(headlineContent = { Text("About") }, modifier = Modifier.clickable { detail = "About" })
                         }
                         "About" -> Column(Modifier.padding(24.dp)) { Wordmark(); Text("Local messaging and file sharing.") }
-                        else -> Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(when (page) {
-
-                                "Library" -> "Files you send and receive will appear here."
-                                else -> "File transfers are coming in milestone E."
-                            })
-                        }
-                    }
+                    } }
+                }
                 }
                 if (!wide) NavigationBar { Destinations { name, icon, label -> NavigationBarItem(selected = section == name, onClick = { select(name) }, icon = icon, label = label) } }
             }

@@ -15,7 +15,8 @@ import java.util.UUID
 @Serializable
 internal data class ChatFrame(val type: String, val v: Int = 1, val id: String = "", val text: String = "",
     val key: String = "", val proof: String = "", val token: String? = null, val colour: Int = 0,
-    val files: Boolean = false, val size: Long = 0, val hash: String = "", val mime: String = "", val preview: String? = null)
+    val files: Boolean = false, val size: Long = 0, val hash: String = "", val mime: String = "", val preview: String? = null,
+    val composing: Boolean = false)
 
 private val wire = Json { ignoreUnknownKeys = true }
 private val b64 = Base64.getEncoder()
@@ -81,6 +82,17 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
         }
     }
     val updates = launch { profile.distinctUntilChanged().collect { ws.write(ChatFrame("profile", text = it.name, colour = it.colour)) } }
+    val typing = launch {
+        var last = 0L
+        trust.keystrokes.filter { it == peer.id }.collect {
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - last >= 900) {
+                last = now
+                val self = profile.first()
+                ws.write(ChatFrame("profile",text = self.name,colour = self.colour,composing = true))
+            }
+        }
+    }
     val pins = launch {
         trust.peers.first { list -> list.none { it.id == peer.id && it.pin == peer.pin } }
         ws.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Pairing changed"))
@@ -109,6 +121,7 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
                     }
                 }
                 "text" -> {
+                    trust.remoteTyping(peer.id,false)
                     require(UUID.fromString(event.id).toString() == event.id && event.text.isNotBlank() && event.text.length <= 4096)
                     trust.saveIncoming(peer, ChatMessage(peer.id, false, event.id, event.text, System.currentTimeMillis(), true))
                     ws.write(ChatFrame("ack", id = event.id))
@@ -116,10 +129,11 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
                 "ack" -> trust.messages.acknowledge(peer.id, event.id)
                 "profile" -> {
                     require(validatedName(event.text) == event.text && event.colour in 0..3)
-                    trust.dao.updateProfile(peer.id, peer.pin, event.text, event.colour)
+                    if (event.composing) trust.remoteTyping(peer.id,true)
+                    else trust.dao.updateProfile(peer.id, peer.pin, event.text, event.colour)
                 }
                 else -> error("Unsupported chat event")
             }
         }
-    } finally { offers.cancel(); downloads.values.forEach { it.cancel() }; sender.cancel(); updates.cancel(); pins.cancel() }
+    } finally { typing.cancel(); trust.remoteTyping(peer.id,false); offers.cancel(); downloads.values.forEach { it.cancel() }; sender.cancel(); updates.cancel(); pins.cancel() }
 }

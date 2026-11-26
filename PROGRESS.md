@@ -1,5 +1,7 @@
 # LanChatShare progress
 
+The API 37 UI tests passed for onboarding, chat navigation and attachments, notifications, foreground work, appearance persistence, Library controls and Share. Screenshots of Appearance and Share are linked from the README. Motion and high-refresh performance on physical devices are still unverified.
+
 The two-device harness accepts one, two or four concurrent streams. Parallel requests verify each frame and persist only consecutive verified blocks. Single-stream instrumentation reports response-header wait, body time including CRC, CRC time, disk sync and Room progress updates. Production still uses one stream. Next measurement is the same 100 MB file and window at each stream count with concurrent chat.
 
 Benchmark reports now read the selected direct network's radio information when Android exposes it. Direct sessions use the negotiated peer address for route labels. Teardown handles a delayed group-creation callback and a user switching Turbo off during negotiation. Debug assembly, all 19 JVM tests and lint passed on the current source.

@@ -15,6 +15,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.animateContentSize
+import dev.lanchatshare.design.LocalAppMotion
+import dev.lanchatshare.design.LocalWallpaper
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
@@ -27,6 +31,20 @@ import kotlinx.coroutines.launch
 
 internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     if (all.count { it.name == peer.name } > 1) peer.name + " · " + peer.id.takeLast(4).uppercase() else peer.name
+
+internal data class ContactTransition(val shared: androidx.compose.animation.SharedTransitionScope,
+    val visibility: androidx.compose.animation.AnimatedVisibilityScope)
+internal val LocalContactTransition = staticCompositionLocalOf<ContactTransition?> { null }
+@Composable private fun ContactMark(peer: TrustedPeer) {
+    val transition = LocalContactTransition.current
+    val mark = if (transition == null) Modifier else with(transition.shared) {
+        Modifier.sharedElement(rememberSharedContentState("contact-" + peer.id),transition.visibility)
+    }
+    Box(mark.size(40.dp).background(MaterialTheme.colorScheme.secondaryContainer,androidx.compose.foundation.shape.CircleShape),
+        contentAlignment = Alignment.Center) {
+        Text(peer.name.take(Character.charCount(peer.name.codePointAt(0))),color = MaterialTheme.colorScheme.onSecondaryContainer)
+    }
+}
 
 @Composable internal fun ChatAccess() {
     val context = LocalContext.current
@@ -65,6 +83,7 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
         items(peers.sortedByDescending { latest[it.id]?.time ?: 0 }, key = { it.id }) { peer ->
             val last = latest[peer.id]
             ListItem(modifier = Modifier.clickable { open(peer) }, headlineContent = { Text(peerLabel(peer, peers)) },
+                leadingContent = { ContactMark(peer) },
                 supportingContent = { Text(last?.let { (if (it.outgoing) "You: " else "") + it.text } ?: "Start a conversation",
                     maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 trailingContent = { if (peer.id in online) Text("Online", color = MaterialTheme.colorScheme.primary) })
@@ -72,7 +91,7 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     }
 }
 
-@Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat, networkSettings: () -> Unit) {
+@Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat, appearance: () -> Unit, networkSettings: () -> Unit) {
     LifecycleResumeEffect(peer.id) {
         openConversation.value = peer.id
         onPauseOrDispose { openConversation.compareAndSet(peer.id,null) }
@@ -105,7 +124,33 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     LaunchedEffect(peer.id, latest?.id, latest?.outgoing) {
         if (latest != null) scroll.scrollToItem(0)
     }
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+    val motion = LocalAppMotion.current
+    val paper = LocalWallpaper.current
+    val ink = MaterialTheme.colorScheme.primary
+    val typing by trust.typing.collectAsStateWithLifecycle()
+    var composing by remember(peer.id) { mutableStateOf(false) }
+    LaunchedEffect(typing[peer.id]) {
+        val remaining = (typing[peer.id] ?: 0L) + 2500 - android.os.SystemClock.elapsedRealtime()
+        composing = remaining > 0
+        if (composing) { kotlinx.coroutines.delay(remaining); composing = false }
+    }
+    Column(Modifier.fillMaxSize().drawBehind {
+        if (paper == "Tint") drawRect(ink.copy(alpha = .045f))
+        if (paper == "Dotted") {
+            val pitch = 22.dp.toPx()
+            var y = pitch / 2
+            while (y < size.height) {
+                var x = pitch / 2
+                while (x < size.width) { drawCircle(ink.copy(alpha = .12f),1.dp.toPx(),androidx.compose.ui.geometry.Offset(x,y)); x += pitch }
+                y += pitch
+            }
+        }
+    }.padding(horizontal = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ContactMark(peer)
+            TextButton(onClick = appearance) { Text("Chat appearance") }
+        }
+        if (composing) Text(peer.name + " is typing…",style = MaterialTheme.typography.labelSmall)
         Text(if (peer.id in online) "Connected over Wi-Fi" else if (network == "On the local network") "Waiting for peer · messages will queue" else network,
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (peer.id !in online && diagnostics[peer.id] != null) {
@@ -115,7 +160,7 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = scroll, reverseLayout = true,
             contentPadding = PaddingValues(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(history.asReversed(), key = { it.id + it.outgoing }) { message ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.outgoing) Arrangement.End else Arrangement.Start) {
+                Row(Modifier.fillMaxWidth().then(if (motion) Modifier.animateItem() else Modifier), horizontalArrangement = if (message.outgoing) Arrangement.End else Arrangement.Start) {
                     Column(Modifier.fillMaxWidth(.80f), horizontalAlignment = if (message.outgoing) Alignment.End else Alignment.Start) {
                         Surface(shape = RoundedCornerShape(20.dp, 20.dp, if (message.outgoing) 5.dp else 20.dp, if (message.outgoing) 20.dp else 5.dp),
                             color = if (message.attachment && message.outgoing) MaterialTheme.colorScheme.secondaryContainer
@@ -135,7 +180,7 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
             TextButton(enabled = !busy, onClick = {
                 photos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }) { Text("Photo") }
-            OutlinedTextField(value = draft, onValueChange = { if (it.length <= 4096) draft = it }, modifier = Modifier.weight(1f),
+            OutlinedTextField(value = draft, onValueChange = { if (it.length <= 4096) { draft = it; if (it.isNotBlank()) trust.composing(peer.id) } }, modifier = Modifier.weight(1f),
                 label = { Text("Message") }, maxLines = 5, enabled = !busy, shape = RoundedCornerShape(18.dp))
             Button(enabled = draft.isNotBlank() && !busy, onClick = {
                 busy = true
