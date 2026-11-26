@@ -197,10 +197,10 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
             if (count > 0) sessions[peer.id] = count else sessions.remove(peer.id)
             connected.value = sessions.keys.toSet()
         }
-        val address = runCatching { InetAddress.getByName(java.net.URI(origin).host.removeSurrounding("[","]").replace("%25","%")) }.getOrNull()
+        val bound = direct?.takeIf { it.peer.id == peer.id && it.peer.pin == peer.pin }
+        val address = bound?.remote ?: runCatching { InetAddress.getByName(java.net.URI(origin).host.removeSurrounding("[","]").replace("%25","%")) }.getOrNull()
         val link = address?.let { ip -> lanLinks(context).firstOrNull { it.contains(ip) } }
         val path = when { link == null -> "Local LAN"; link.name.startsWith("p2p") -> "Wi-Fi Direct"; link.network == null -> "Downstream Wi-Fi / hotspot"; else -> "Wi-Fi client (router or hotspot)" }
-        val bound = direct?.takeIf { it.peer.id == peer.id && it.peer.pin == peer.pin }
         routeNames.update { it + (peer.id to (bound?.medium ?: path)) }
         change(1)
         attempts.update { it - peer.id }

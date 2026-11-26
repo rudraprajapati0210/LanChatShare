@@ -78,7 +78,7 @@ internal object TransferMeter {
                 }
                 rates.update { it + (key to rate) }
                 if (row.state=="done") {
-                    val info = wifiInfo(c)
+                    val info = radioReading(c,row.peer)
                     val record=JSONObject().put("benchmark",row.name.startsWith("LAN benchmark ") && row.mime=="application/octet-stream")
                         .put("sizeBytes",row.size).put("direction",if(row.outgoing) "send" else "receive")
                         .put("measuredFromOffset",s.initial).put("elapsedMs",now-s.start).put("averageMBps",avg)
@@ -86,8 +86,8 @@ internal object TransferMeter {
                         .put("screenOnBytes",s.onBytes).put("screenOffBytes",s.offBytes).put("screenOnMBps",if(s.onMs>0)s.onBytes/1000.0/s.onMs else JSONObject.NULL)
                         .put("screenOffMBps",if(s.offMs>0)s.offBytes/1000.0/s.offMs else JSONObject.NULL)
                         .put("retriesObserved",s.retries).put("stallsObserved",s.stalls).put("processCpuMs",Process.getElapsedCpuTime()-s.cpu)
-                        .put("frequencyMHz",info?.frequency ?: -1).put("linkMbps",info?.linkSpeed ?: -1)
-                        .put("rssiDbm",info?.rssi ?: JSONObject.NULL)
+                        .put("frequencyMHz",info.frequency ?: JSONObject.NULL).put("linkMbps",info.mbps ?: JSONObject.NULL)
+                        .put("rssiDbm",info.rssi ?: JSONObject.NULL)
                         .put("path",chat.paths.value[row.peer] ?: "unknown").put("endedAt",System.currentTimeMillis())
                     prefs(c).edit().putString(key,record.toString()).apply()
                     samples.remove(key); reportRevision.value++
@@ -102,4 +102,8 @@ internal object TransferMeter {
 @Suppress("DEPRECATION")
 internal fun wifiInfo(c: Context) = try { c.applicationContext.getSystemService(WifiManager::class.java).connectionInfo }
 catch (_: SecurityException) { null }
+
+internal fun radioReading(c: Context, peer: String): RadioReading = TurboLink.reading(c,peer) ?: wifiInfo(c).let {
+    RadioReading(it?.frequency?.takeIf { f -> f > 0 },it?.linkSpeed?.takeIf { speed -> speed > 0 },it?.rssi?.takeIf { signal -> signal in -126..0 })
+}
 

@@ -24,8 +24,9 @@ import kotlin.coroutines.resumeWithException
 
 enum class TurboMode { Off, Ask, Auto }
 
-@Serializable internal data class RadioOffer(val medium: String, val ssid: String, val secret: String, val ip: String, val port: Int = LAN_PORT)
-internal data class TurboRoute(val peer: TrustedPeer, val remote: InetAddress, val local: InetAddress, val network: Network?, val medium: String)
+@Serializable internal data class RadioOffer(val medium: String, val ssid: String, val secret: String, val ip: String, val port: Int = LAN_PORT, val frequency: Int? = null)
+internal data class TurboRoute(val peer: TrustedPeer, val remote: InetAddress, val local: InetAddress, val network: Network?, val medium: String,val frequency: Int? = null)
+data class RadioReading(val frequency: Int?,val mbps: Int?,val rssi: Int?)
 private data class HostRadio(val offer: RadioOffer, val lease: Closeable)
 
 object TurboLink {
@@ -39,14 +40,20 @@ object TurboLink {
     internal val route = current.asStateFlow()
     private val feedback = MutableStateFlow("")
     val status = feedback.asStateFlow()
+    fun reading(context: Context,peer: String): RadioReading? {
+        val path = current.value?.takeIf { it.peer.id == peer } ?: return null
+        val info = path.network?.let { context.getSystemService(ConnectivityManager::class.java).getNetworkCapabilities(it)?.transportInfo } as? android.net.wifi.WifiInfo
+        return RadioReading(info?.frequency?.takeIf { it > 0 } ?: path.frequency, info?.linkSpeed?.takeIf { it > 0 },info?.rssi?.takeIf { it in -126..0 })
+    }
     private var lease: Closeable? = null
     private var monitor: Job? = null
     @Synchronized fun stop() {
         current.value = null
         monitor?.cancel()
         monitor = null
-        lease?.close()
+        runCatching { lease?.close() }
         lease = null
+        feedback.value = "Direct link closed."
     }
 
     @Synchronized private fun activate(path: TurboRoute, reservation: Closeable, trust: TrustStore) {
@@ -96,7 +103,7 @@ object TurboLink {
                 val local = ipv4(radio.offer.ip)
                 val remote = ipv4(channel.open(frames.receive()).decodeToString())
                 require(lanLinks(context).any { it.address == local && it.contains(remote) })
-                TurboRoute(verified.peer,remote,local,null,radio.offer.medium)
+                TurboRoute(verified.peer,remote,local,null,radio.offer.medium,radio.offer.frequency)
             } else {
                 val offer = Json.decodeFromString<RadioOffer>(channel.open(frames.receive()).decodeToString())
                 require(offer.medium in listOf("Wi-Fi Direct","Local hotspot") && offer.port == LAN_PORT)
@@ -105,9 +112,9 @@ object TurboLink {
                 owned = membership
                 val link = lanLinks(context).first { it.network == network && it.address is Inet4Address && it.contains(remote) }
                 frames.send(channel.seal(requireNotNull(link.address.hostAddress).encodeToByteArray()))
-                TurboRoute(verified.peer,remote,link.address,network,offer.medium)
+                TurboRoute(verified.peer,remote,link.address,network,offer.medium,offer.frequency)
             }
-            require(trust.dao.pin(path.peer.id) == path.peer.pin)
+            require(mode(context) != TurboMode.Off && trust.dao.pin(path.peer.id) == path.peer.pin)
             activate(path,requireNotNull(owned),trust)
             owned = null
         } catch (e: Exception) {
@@ -131,18 +138,22 @@ object TurboLink {
         val config = WifiP2pConfig.Builder().setNetworkName(ssid).setPassphrase(secret)
             .setGroupOperatingBand(WifiP2pConfig.GROUP_OWNER_BAND_5GHZ).build()
         val removed = AtomicBoolean()
-        val release = Closeable {
-            if (removed.compareAndSet(false,true)) manager.requestGroupInfo(p2p) { group ->
-                if (group?.networkName == ssid) manager.removeGroup(p2p, object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() = p2p.close()
-                    override fun onFailure(reason: Int) = p2p.close()
-                }) else p2p.close()
+        fun removeOwned(channel: WifiP2pManager.Channel) {
+            manager.requestGroupInfo(channel) { group ->
+                if (group?.networkName == ssid) manager.removeGroup(channel, object : WifiP2pManager.ActionListener {
+                    override fun onSuccess() = channel.close()
+                    override fun onFailure(reason: Int) = channel.close()
+                }) else channel.close()
             }
         }
+        val release = Closeable { if (removed.compareAndSet(false,true)) removeOwned(p2p) }
         try {
             suspendCancellableCoroutine<Unit> { cont ->
                 manager.createGroup(p2p, config, object : WifiP2pManager.ActionListener {
-                    override fun onSuccess() { if (cont.isActive) cont.resume(Unit) }
+                    override fun onSuccess() {
+                        if (cont.isActive) cont.resume(Unit)
+                        else if (removed.get()) manager.initialize(c, Looper.getMainLooper(), null)?.let(::removeOwned)
+                    }
                     override fun onFailure(reason: Int) { if (cont.isActive) cont.resumeWithException(IllegalStateException("Group unavailable ($reason)")) }
                 })
             }
@@ -150,7 +161,7 @@ object TurboLink {
                 val group = suspendCancellableCoroutine<WifiP2pGroup?> { cont -> manager.requestGroupInfo(p2p) { if (cont.isActive) cont.resume(it) } }
                 if (group?.isGroupOwner == true && group.networkName == ssid) {
                     val address = NetworkInterface.getByName(group.getInterface())?.inetAddresses?.toList()?.filterIsInstance<Inet4Address>()?.singleOrNull()
-                    if (address != null) return HostRadio(RadioOffer("Wi-Fi Direct",ssid,secret,requireNotNull(address.hostAddress)),release)
+                    if (address != null) return HostRadio(RadioOffer("Wi-Fi Direct",ssid,secret,requireNotNull(address.hostAddress),frequency = group.frequency.takeIf { it > 0 }),release)
                 }
                 delay(250)
             }

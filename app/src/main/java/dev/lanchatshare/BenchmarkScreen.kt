@@ -34,12 +34,12 @@ import kotlinx.coroutines.*
                 message="Results exported" } catch (e: CancellationException) { throw e } catch (_: Exception) { message="Could not write the report" }
         }
     }
-    val info = remember(revision,target) { wifiInfo(context) }
+    val info = remember(revision,target,paths) { radioReading(context,target) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text("Test a local transfer",style=MaterialTheme.typography.titleLarge)
         Text("Each run sends one generated file. Accept it on the other phone. Keep enough free space on both phones.")
-        if(info!=null && info.frequency>0) Text("${info.frequency} MHz · ${info.linkSpeed} Mbps · ${info.rssi} dBm")
-        if(info?.frequency in 2400..2500) Text("This is 2.4 GHz. Try the 5 GHz network or a 5 GHz hotspot and compare.")
+        Text(listOfNotNull(info.frequency?.let { "$it MHz" }, info.mbps?.let { "$it Mbps" }, info.rssi?.let { "$it dBm" }).joinToString(" · ").ifEmpty { "Radio details unavailable" })
+        if(info.frequency in 2400..2500) Text("This is 2.4 GHz. Try the 5 GHz network or a 5 GHz hotspot and compare.")
         peers.forEach { peer -> FilterChip(target==peer.id,{target=peer.id},{Text(peerLabel(peer,peers))}) }
         if(peers.isEmpty()) Text("Pair a phone in Nearby first.")
         paths[target]?.let { Text(it) }
