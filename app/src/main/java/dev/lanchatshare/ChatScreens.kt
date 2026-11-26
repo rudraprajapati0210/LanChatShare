@@ -88,14 +88,19 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
     val scroll = rememberLazyListState()
     val attachments by remember(peer.id, peer.pin) { trust.transfers.forPeer(peer) }.collectAsStateWithLifecycle(emptyList())
     val byMessage = remember(attachments) { attachments.associateBy { it.id to it.outgoing } }
-    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) scope.launch {
+    var picked by rememberSaveable { mutableStateOf<String?>(null) }
+    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> picked = uri?.toString() }
+    picked?.let { path -> AlertDialog(onDismissRequest = { picked = null }, title = { Text("Share with " + peer.name) },
+        text = { QualityPicker() }, dismissButton = { TextButton(onClick = { picked = null }) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = {
+            picked = null
+            scope.launch {
             busy = true
-            try { trust.transfers.add(listOf(peer), uri); error = false }
+            try { trust.transfers.add(listOf(peer), android.net.Uri.parse(path)); error = false }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { error = true } finally { busy = false }
-        }
-    }
+            }
+        }) { Text("Send media") } }) }
     val latest = history.lastOrNull()
     LaunchedEffect(peer.id, latest?.id, latest?.outgoing) {
         if (latest != null) scroll.scrollToItem(0)
@@ -128,7 +133,7 @@ internal fun peerLabel(peer: TrustedPeer, all: List<TrustedPeer>) =
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
             TextButton(enabled = !busy, onClick = {
-                photos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                photos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
             }) { Text("Photo") }
             OutlinedTextField(value = draft, onValueChange = { if (it.length <= 4096) draft = it }, modifier = Modifier.weight(1f),
                 label = { Text("Message") }, maxLines = 5, enabled = !busy, shape = RoundedCornerShape(18.dp))

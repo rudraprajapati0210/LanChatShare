@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import androidx.room.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -60,9 +61,18 @@ class Transfers internal constructor(private val context: Context, private val d
         val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
             if (it.moveToFirst()) it.getString(0) else null
         } ?: "Attachment"
-        stage(peers, name, resolver.getType(uri) ?: "application/octet-stream") {
-            requireNotNull(resolver.openInputStream(uri))
-        }
+        val mime = resolver.getType(uri) ?: "application/octet-stream"
+        val image = mime.startsWith("image/")
+        val video = mime.startsWith("video/")
+        val thumbnail = if (image || video) context.tinyPreview(uri) else null
+        if ((image || video) && context.standardMedia().first()) {
+            val extension = if (image) ".jpg" else ".mp4"
+            val temp = File.createTempFile("media",extension,context.cacheDir)
+            try {
+                if (image) context.standardPhoto(uri,temp) else context.standardVideo(uri,temp)
+                stage(peers,name.substringBeforeLast('.') + extension,if (image) "image/jpeg" else "video/mp4",thumbnail) { temp.inputStream() }
+            } finally { temp.delete() }
+        } else stage(peers, name, mime, thumbnail) { requireNotNull(resolver.openInputStream(uri)) }
     }
     suspend fun addBenchmark(peer: TrustedPeer, megabytes: Int) {
         require(megabytes in listOf(10, 100, 1000))
@@ -90,7 +100,8 @@ class Transfers internal constructor(private val context: Context, private val d
     }
     suspend fun addText(peers: List<TrustedPeer>, text: String) = stage(peers, "Shared text.txt", "text/plain") { text.byteInputStream() }
     fun forPeer(peer: TrustedPeer) = dao.observe(peer.id, peer.pin)
-    internal suspend fun stage(peers: List<TrustedPeer>, title: String, mime: String, open: () -> InputStream) = withContext(Dispatchers.IO) {
+    fun previewFile(row: Transfer) = File(file(row).path + ".thumb")
+    internal suspend fun stage(peers: List<TrustedPeer>, title: String, mime: String, thumbnail: ByteArray? = null, open: () -> InputStream) = withContext(Dispatchers.IO) {
         require(peers.isNotEmpty())
         directory.mkdirs()
         val temp = File.createTempFile("stage", ".partial", directory)
@@ -107,6 +118,7 @@ class Transfers internal constructor(private val context: Context, private val d
             }
             stored.parentFile!!.mkdirs()
             check(temp.renameTo(stored))
+            if (thumbnail != null) previewFile(rows.first()).writeBytes(thumbnail)
             db.withTransaction {
                 rows.forEach { row ->
                     check(db.peers().pin(row.peer) == row.pin)
@@ -114,7 +126,7 @@ class Transfers internal constructor(private val context: Context, private val d
                     db.messages().insert(ChatMessage(row.peer, true, row.id, row.name, row.time, false, true))
                 }
             }
-        } catch (e: Exception) { stored.delete(); throw e }
+        } catch (e: Exception) { stored.delete(); File(stored.path + ".thumb").delete(); throw e }
         finally { temp.delete() }
     }
     suspend fun action(row: Transfer, next: String) {
@@ -139,7 +151,19 @@ class Transfers internal constructor(private val context: Context, private val d
         check(db.peers().pin(peer.id) == peer.pin)
         val row = Transfer(peer.id, false, frame.id, frame.text, frame.mime, frame.size, frame.hash, peer.pin,
             "", "offered", 0, System.currentTimeMillis())
-        if (dao.insert(row) != -1L) db.messages().insert(ChatMessage(peer.id, false, row.id, row.name, row.time, true, true))
+        if (dao.insert(row) != -1L) {
+            frame.preview?.takeIf { it.length <= 10924 }?.let { encoded ->
+                runCatching {
+                    val bytes = java.util.Base64.getDecoder().decode(encoded)
+                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeByteArray(bytes,0,bytes.size,bounds)
+                    if (bounds.outMimeType == "image/jpeg" && bounds.outWidth in 1..160 && bounds.outHeight in 1..160 && bytes.size <= 8192) {
+                        previewFile(row).apply { parentFile!!.mkdirs(); writeBytes(bytes) }
+                    }
+                }
+            }
+            db.messages().insert(ChatMessage(peer.id, false, row.id, row.name, row.time, true, true))
+        }
     }
     internal suspend fun receipt(peer: TrustedPeer, id: String) = db.withTransaction {
         val row = dao.get(peer.id, true, id) ?: return@withTransaction

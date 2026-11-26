@@ -14,6 +14,8 @@ Chats opens directly after the one-time name prompt. Verify a phone in Nearby, t
 
 ## Share photos and files
 
+Choose Original for unchanged bytes or Standard for a smaller photo or video. The last choice is saved on this phone and is editable in Settings → Media quality. The chat picker shows the recipient before sending. The offer can include a small preview while the file awaits acceptance.
+
 Update both phones. In a conversation, tap **Photo** and pick an image. The other phone can accept it in chat, see it inline and use **Save a copy** to export the original. Incoming text and photo offers bring the open conversation to the newest item.
 
 In **Share files**, pick photos, videos, documents, APKs, vCards or text, select one or more paired phones and tap **Send**. You can also choose LanChatShare in the gallery or another app's Android Share sheet. It opens the recipient picker before sending. Each recipient decides independently. **Transfers** shows requests, progress, pause, resume, retry and history. Enable incoming-file notifications there to accept or decline in the background.

@@ -41,6 +41,12 @@ import java.io.IOException
         }
     }
     Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (preview && (!available || row.mime.startsWith("video/"))) {
+            val thumbnail by produceState<android.graphics.Bitmap?>(null,row.id,row.outgoing) {
+                value = withContext(Dispatchers.IO) { android.graphics.BitmapFactory.decodeFile(files.previewFile(row).path) }
+            }
+            thumbnail?.let { Image(it.asImageBitmap(),row.name,Modifier.fillMaxWidth().heightIn(max = 160.dp)) }
+        }
         if (available && preview && row.mime.startsWith("image/")) {
             val bitmap by produceState<android.graphics.Bitmap?>(null, row.peer, row.id, available) {
                 value = withContext(Dispatchers.IO) { try {
@@ -85,9 +91,24 @@ import java.io.IOException
         Row { actions.forEach { (label, next) ->
             TextButton(onClick = { scope.launch { files.action(row, next) } }) { Text(label) }
         }
+        if (row.state in listOf("active","retrying","paused") || row.outgoing && row.state == "offered")
+            TextButton(onClick = { scope.launch { files.action(row,"cancelled") } }) { Text("Cancel transfer") }
             if (!row.outgoing && available) TextButton(onClick = { save.launch(row.name) }) { Text("Save a copy") }
         }
         if (problem) Text("Couldn’t save this copy. Choose another location.")
+    }
+}
+
+@Composable internal fun QualityPicker() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val standard by remember(context) { context.standardMedia() }.collectAsStateWithLifecycle(false)
+    Column {
+        Text("Media quality",style = MaterialTheme.typography.titleSmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(!standard,{ scope.launch { context.setStandardMedia(false) } },{ Text("Original") })
+            FilterChip(standard,{ scope.launch { context.setStandardMedia(true) } },{ Text("Standard") })
+        }
     }
 }
 
@@ -139,6 +160,7 @@ import java.io.IOException
             }
         } else {
             item { Text("What’s going over?", style = MaterialTheme.typography.headlineMedium) }
+            item { QualityPicker() }
             item { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(enabled = !sending, onClick = { photos.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo)) }) { Text("Photos & videos") }
                 OutlinedButton(enabled = !sending, onClick = { documents.launch(arrayOf("*/*")) }) { Text("Files") }

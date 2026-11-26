@@ -119,9 +119,11 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                         "Notifications" -> NotificationSettings()
                         "Diagnostics" -> Diagnostics { detail = "Benchmark" }
                         "Benchmark" -> BenchmarkScreen(trusted,trust.transfers,chat)
+                        "Media quality" -> QualityPicker()
                         "Settings" -> Column {
                             TextButton(onClick = { detail = "Notifications" }) { Text("Notifications and reachability") }
                             TextButton(onClick = { detail = "Diagnostics" }) { Text("Diagnostics") }
+                            TextButton(onClick = { detail = "Media quality" }) { Text("Media quality") }
                             ListItem(headlineContent = { Text("Profile") }, supportingContent = { Text(profile.name) },
                                 modifier = Modifier.clickable { detail = "Profile" })
                             ListItem(headlineContent = { Text("Network and hotspot") }, modifier = Modifier.clickable { detail = "Network and hotspot" })

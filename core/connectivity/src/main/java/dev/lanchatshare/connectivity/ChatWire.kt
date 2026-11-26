@@ -15,7 +15,7 @@ import java.util.UUID
 @Serializable
 internal data class ChatFrame(val type: String, val v: Int = 1, val id: String = "", val text: String = "",
     val key: String = "", val proof: String = "", val token: String? = null, val colour: Int = 0,
-    val files: Boolean = false, val size: Long = 0, val hash: String = "", val mime: String = "")
+    val files: Boolean = false, val size: Long = 0, val hash: String = "", val mime: String = "", val preview: String? = null)
 
 private val wire = Json { ignoreUnknownKeys = true }
 private val b64 = Base64.getEncoder()

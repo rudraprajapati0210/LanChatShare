@@ -18,6 +18,8 @@ android {
 ksp { arg("room.schemaLocation", file("schemas").absolutePath) }
 dependencies {
     implementation(project(":core:data"))
+    implementation(libs.media.transformer)
+    implementation(libs.media.effect)
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.websockets)
     implementation(libs.ktor.client.cio)

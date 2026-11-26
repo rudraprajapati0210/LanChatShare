@@ -175,6 +175,8 @@ internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files
             else -> null
         }
         type?.let { ChatFrame(it, id = row.id, text = row.name, size = row.size, hash = row.hash,
+            preview = if (it == "file.offer") files.previewFile(row).takeIf { f -> f.length() in 1..8192 }
+                ?.let { f -> java.util.Base64.getEncoder().encodeToString(f.readBytes()) } else null,
             key = if (row.state == "cancelled") (if (row.outgoing) "cancel-sent" else "cancel-received") else "", mime = row.mime, token = if (it == "file.grant") row.token else null) }
     } }.distinctUntilChanged().collect { frames ->
         frames.filterNot { it in previous }.forEach { write(it) }
