@@ -46,6 +46,15 @@ class ChatTransportTest {
             server.start(false)
             val port = server.engine.resolvedConnectors().first().port
             val url = "wss://127.0.0.1:$port/v1/chat"
+            val loopback = java.net.InetAddress.getByName("127.0.0.1")
+            val path = TurboRoute(peerB,loopback,loopback,null,"direct socket test")
+            routedClient(path,aTls,false).use { direct ->
+                assertEquals(HttpStatusCode.Forbidden,
+                    direct.get("https://${deviceHost(b.id)}:$port/v1/files/no-grant").status)
+            }
+            routedClient(path.copy(peer = peerB.copy(pin = pin(keysA.public))),aTls,false).use { direct ->
+                assertTrue(runCatching { direct.get("https://${deviceHost(b.id)}:$port/v1/files/no-grant") }.isFailure)
+            }
             val wrongPin = chatClient(peerB.copy(pin = pin(keysA.public)), aTls)
             try {
                 val attempt = runCatching { withTimeout(10000) { wrongPin.webSocket(urlString = url) { error("reached endpoint") } } }

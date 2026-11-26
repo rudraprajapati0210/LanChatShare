@@ -1,5 +1,9 @@
 # LanChatShare progress
 
+## Direct-link implementation
+
+Primary-source research is in docs/TRANSFER_RESEARCH.md and prior measurements are in docs/BENCHMARKS.md. Experimental direct links use transcript-authenticated ECDH, negotiated temporary credentials, a P2P group or local-only hotspot, and socket-scoped routing. Physical acceptance and parallel-stream measurements are open. Existing pins, grant tokens and verified byte offsets remain authoritative.
+
 ## Verified checkpoint
 
 The two-emulator window experiment completed all five transfers with matching SHA-256 and sender receipts. The 1 GB file completed in 1,038.177 seconds. The 500 MB and 1 GB runs overlapped other host work and are integrity results only. The API 37 transport regression stopped the real TLS listener after a durable checkpoint, observed the retry state, then confirmed that the first request to the replacement listener started at the saved Room offset and the final SHA-256 matched. Pairing migration, rejection of wrong pins and revocation passed. Seven app instrumentation tests, five connectivity instrumentation tests and sixteen JVM tests passed. The opt-in benchmark ran separately on both emulator identities.

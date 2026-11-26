@@ -22,7 +22,7 @@ private fun fresh() = ByteArray(32).also(random::nextBytes)
 @Serializable
 internal data class Hello(val version: Int, val id: String, val name: String, val colour: Int, val key: String, val nonce: String,
     val endpoints: List<WifiEndpoint> = emptyList(), val spkiSha256: String? = null,
-    val certificate: String? = null, val certificateSha256: String? = null)
+    val certificate: String? = null, val certificateSha256: String? = null, val upgradeKey: String? = null)
 
 internal class Frames(input: InputStream, output: OutputStream) {
     private val reader = DataInputStream(input)
@@ -41,7 +41,8 @@ internal class Frames(input: InputStream, output: OutputStream) {
     fun exchange(bytes: ByteArray): ByteArray { send(bytes); return receive() }
 }
 
-internal data class Verified(val peer: TrustedPeer, val token: ByteArray, val endpoints: List<WifiEndpoint>)
+internal data class Verified(val peer: TrustedPeer, val token: ByteArray, val endpoints: List<WifiEndpoint>,
+    val upgrade: UpgradeChannel? = null)
 internal data class Comparison(val name: String, val id: String, val digits: String, val changed: Boolean)
 
 internal fun checkCertificate(encoded: String?, fingerprint: String?, key: PublicKey) {
@@ -65,13 +66,14 @@ private fun verify(key: PublicKey, bytes: ByteArray, signature: ByteArray) {
 internal suspend fun pair(
     frames: Frames, initiator: Boolean, profile: Profile, keys: KeyPair,
     lookupPin: suspend (String) -> String?, endpoints: List<WifiEndpoint> = emptyList(), certificate: ByteArray? = null,
-    confirm: suspend (Comparison) -> Boolean
+    allowUpgrade: Boolean = false, confirm: suspend (Comparison) -> Boolean
 ): Verified {
     val role = if (initiator) 0.toByte() else 1.toByte()
     val otherRole = (1 - role).toByte()
+    val ephemeral = if (allowUpgrade) UpgradeChannel.ephemeral() else null
     val mine = Hello(1, profile.id, profile.name, profile.colour, encoder.encodeToString(keys.public.encoded), encoder.encodeToString(fresh()),
         endpoints, encoder.encodeToString(digest(keys.public.encoded)), certificate?.let(encoder::encodeToString),
-        certificate?.let { encoder.encodeToString(digest(it)) })
+        certificate?.let { encoder.encodeToString(digest(it)) }, ephemeral?.public?.encoded?.let(encoder::encodeToString))
     val local = json.encodeToString(mine).encodeToByteArray()
     val commitment = frames.exchange(digest(byteArrayOf(role) + local))
     val remote = frames.exchange(local)
@@ -101,6 +103,8 @@ internal suspend fun pair(
     verify(publicKey, approval + otherRole, frames.exchange(signed(keys.private, approval + role)))
     val token = if (initiator) fresh().also(frames::send) else frames.receive()
     require(token.size == 32)
-    return Verified(TrustedPeer(hello.id, hello.name, hello.colour, pin, hello.certificateSha256), token, hello.endpoints)
+    val upgrade = if (known.toInt() == 1 && status[0].toInt() == 1 && ephemeral != null && hello.upgradeKey != null)
+        UpgradeChannel(ephemeral, decoder.decode(hello.upgradeKey), transcript, role) else null
+    return Verified(TrustedPeer(hello.id, hello.name, hello.colour, pin, hello.certificateSha256), token, hello.endpoints, upgrade)
 }
 

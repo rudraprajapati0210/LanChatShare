@@ -87,14 +87,17 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         val pins = trust.peers.map { rows -> rows.associate { it.id to it.pin } }.distinctUntilChanged()
         flow {
             while (currentCoroutineContext().isActive) { emit(lanLinks(context) to System.currentTimeMillis() / TLS_PERIOD); delay(3000) }
-        }.distinctUntilChanged().combine(pins) { route, peers -> route to peers }.collectLatest { (route, peers) ->
+        }.distinctUntilChanged().combine(pins) { route, peers -> route to peers }.combine(TurboLink.route) { state, direct ->
+            state to direct
+        }.collectLatest { (state, direct) ->
+            val (route, peers) = state
             val links = route.first
             if (peers.isEmpty()) return@collectLatest
             val credentials = deviceCredentials(local.id)
             val tls = serverTls(credentials) { peers }
             if (links.isEmpty()) { status.value = "Join Wi-Fi or turn on a phone hotspot."; return@collectLatest }
             while (currentCoroutineContext().isActive) {
-                try { network(local, links, tls, credentials) }
+                try { network(local, links, tls, credentials, direct?.takeIf { peers[it.peer.id] == it.peer.pin }) }
                 catch (e: CancellationException) { throw e }
                 catch (e: Exception) {
                     android.util.Log.w("LanChatShare", "LAN listener unavailable", e)
@@ -105,13 +108,13 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         }
     }
 
-    private suspend fun network(local: Profile, links: List<LanLink>, tls: SSLContext, credentials: Credentials): Unit = coroutineScope {
+    private suspend fun network(local: Profile, links: List<LanLink>, tls: SSLContext, credentials: Credentials, direct: TurboRoute?): Unit = coroutineScope {
         val seen = ConcurrentHashMap<String, Seen>()
         val peers = trust.peers.stateIn(this, SharingStarted.Eagerly, emptyList())
         val pending = ConcurrentHashMap.newKeySet<String>()
         val challenges = AtomicInteger()
         val manager = context.getSystemService(android.net.ConnectivityManager::class.java)
-        val wifi = links.map { it.network }.distinct().singleOrNull()
+        val wifi = links.map { it.network }.distinct().singleOrNull().takeIf { direct == null }
         val previousNetwork = manager.boundNetworkForProcess
         val server = chatServer(links.map { requireNotNull(it.address.hostAddress) }.distinct(), LAN_PORT, tls, trust.transfers) { address ->
             if (challenges.incrementAndGet() > 12) { challenges.decrementAndGet(); return@chatServer }
@@ -120,7 +123,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                 finally { challenges.decrementAndGet() }
             chatClient(peer, credentials).use { http ->
                 val host = if (address.contains(':')) "[" + address.replace("%", "%25") + "]" else address
-                exchange(this, peer, http, "https://$host:$LAN_PORT", supportsFiles)
+                exchange(this, peer, http, "https://$host:$LAN_PORT", supportsFiles, direct, credentials)
             }
         }
         try {
@@ -135,6 +138,8 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                 peers.value.forEach { peer ->
                     val routes = trust.hints.value[peer.id].orEmpty().map { it.address() to it.port }.toMutableList()
                     seen[peer.id]?.takeIf { it.until > SystemClock.elapsedRealtime() }?.let { routes.add(0, it.host to it.port) }
+                    val selected = direct?.takeIf { it.peer.id == peer.id && it.peer.pin == peer.pin }
+                    selected?.let { routes.add(0, it.remote to LAN_PORT) }
                     if (peer.id !in online.value && routes.isNotEmpty() && pending.add(peer.id)) launch {
                         try {
                             for ((ip, port) in routes.distinct()) {
@@ -144,20 +149,23 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                                 else ip.hostAddress
                                 val literal = if (ip is Inet6Address) "[" + host?.replace("%", "%25") + "]" else host
                                 try {
-                                    chatClient(peer, credentials).use { client ->
-                                        client.webSocket(urlString = "wss://$literal:$port/v1/chat") {
+                                    val bound = selected?.takeIf { it.remote == ip }
+                                    val host = if (bound == null) literal else deviceHost(peer.id)
+                                    (bound?.let { routedClient(it,credentials,true) } ?: chatClient(peer, credentials)).use { client ->
+                                        client.webSocket(urlString = "wss://$host:$port/v1/chat") {
                                             var supportsFiles = false
                                             withTimeout(10000) {
                                                 val token = trust.pendingToken(peer.id)
                                                 authenticateOutgoing(local.id, peer, identityKeys(), token) { supportsFiles = it }
                                                 trust.completeOutgoing(peer.id, token)
                                             }
-                                            exchange(this, peer, client, "https://$literal:$port", supportsFiles)
+                                            exchange(this, peer, client, "https://$host:$port", supportsFiles, selected, credentials)
                                         }
                                     }
                                     break
                                 } catch (e: CancellationException) { if (!isActive) throw e }
                                 catch (e: Exception) {
+                                    if (selected?.remote == ip) TurboLink.release(selected)
                                     val badPin = generateSequence<Throwable>(e) { it.cause }.any { it is CertificateException }
                                     attempts.update { it + (peer.id to if (badPin) "Device key changed. Verify this phone again in Nearby."
                                         else "No reply over Wi-Fi. Open LanChatShare on both phones. If this router isolates devices, try a phone hotspot.") }
@@ -175,7 +183,8 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         }
     }
 
-    private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer, client: HttpClient, origin: String, supportsFiles: Boolean) {
+    private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer, client: HttpClient, origin: String, supportsFiles: Boolean,
+        direct: TurboRoute?, credentials: Credentials) {
         fun change(delta: Int) = synchronized(sessions) {
             val count = (sessions[peer.id] ?: 0) + delta
             if (count > 0) sessions[peer.id] = count else sessions.remove(peer.id)
@@ -184,10 +193,22 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         val address = runCatching { InetAddress.getByName(java.net.URI(origin).host.removeSurrounding("[","]").replace("%25","%")) }.getOrNull()
         val link = address?.let { ip -> lanLinks(context).firstOrNull { it.contains(ip) } }
         val path = when { link == null -> "Local LAN"; link.name.startsWith("p2p") -> "Wi-Fi Direct"; link.network == null -> "Downstream Wi-Fi / hotspot"; else -> "Wi-Fi client (router or hotspot)" }
-        routeNames.update { it + (peer.id to path) }
+        val bound = direct?.takeIf { it.peer.id == peer.id && it.peer.pin == peer.pin }
+        routeNames.update { it + (peer.id to (bound?.medium ?: path)) }
         change(1)
         attempts.update { it - peer.id }
-        try { socket.chat(peer, trust, profile, supportsFiles) { row, token -> queueDownload(row) { trust.transfers.receive(row, client, origin, token) } } } finally { change(-1) }
+        try {
+            socket.chat(peer, trust, profile, supportsFiles) { row, token ->
+                if (bound == null) queueDownload(row) { trust.transfers.receive(row, client, origin, token) }
+                else routedClient(bound,credentials,false).use { data ->
+                    queueDownload(row) {
+                        trust.transfers.receive(row,data,"https://${deviceHost(peer.id)}:$LAN_PORT",token).also { ok ->
+                            if (!ok) TurboLink.release(bound)
+                        }
+                    }
+                }
+            }
+        } finally { change(-1) }
     }
 }
 

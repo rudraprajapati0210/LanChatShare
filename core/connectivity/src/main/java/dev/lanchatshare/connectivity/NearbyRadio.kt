@@ -11,6 +11,7 @@ import dev.lanchatshare.data.Profile
 import java.io.Closeable
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -43,6 +44,11 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
     private var closed = false
     private var listener: BluetoothServerSocket? = null
     private var active: BluetoothSocket? = null
+    private val acceptingUpgrade = AtomicBoolean(false)
+    fun allowNextUpgrade() {
+        acceptingUpgrade.set(true)
+        mutable.update { it.copy(status = "Ready for a direct link from a verified phone.") }
+    }
     private var decision: CompletableDeferred<Boolean>? = null
     private var scanner: BluetoothLeScanner? = null
     private var advertiser: BluetoothLeAdvertiser? = null
@@ -109,14 +115,14 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
         }
     }
 
-    fun connect(peer: Candidate) {
+    fun connect(peer: Candidate, upgrade: Boolean = false) {
         scope.launch {
-            try { runSocket(checkNotNull(adapter).getRemoteDevice(peer.address).createL2capChannel(peer.port), true) }
+            try { runSocket(checkNotNull(adapter).getRemoteDevice(peer.address).createL2capChannel(peer.port), true, upgrade) }
             catch (e: Exception) { if (isActive) mutable.update { it.copy(status = "Couldn’t reach this phone. Try again.") } }
         }
     }
 
-    private fun runSocket(socket: BluetoothSocket, initiator: Boolean) {
+    private fun runSocket(socket: BluetoothSocket, initiator: Boolean, upgrade: Boolean = false) {
         synchronized(guard) {
             if (closed || active != null) { socket.close(); return }
             active = socket
@@ -130,8 +136,11 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
             }
             try {
                 if (initiator) socket.connect()
-                val verified = pair(Frames(socket.inputStream, socket.outputStream), initiator, profile,
-                    identityKeys(), trust.dao::pin, wifiEndpoints(context), identityCertificate()) { match ->
+                val frames = Frames(socket.inputStream, socket.outputStream)
+                val mode = TurboLink.mode(context)
+                val permitUpgrade = mode != TurboMode.Off && (if (initiator) upgrade else acceptingUpgrade.getAndSet(false) || mode == TurboMode.Auto)
+                val verified = pair(frames, initiator, profile,
+                    identityKeys(), trust.dao::pin, wifiEndpoints(context), identityCertificate(), permitUpgrade) { match ->
                     val wait = CompletableDeferred<Boolean>()
                     synchronized(guard) {
                         if (closed || active !== socket || SystemClock.elapsedRealtime() >= deadline) return@pair false
@@ -147,6 +156,8 @@ class NearbyRadio(private val context: Context, private val profile: Profile, pr
                 val address = verified.endpoints.firstOrNull()?.display()
                 val route = address?.let { " Wi-Fi endpoint: $it." }.orEmpty()
                 mutable.update { it.copy(status = "Verified " + verified.peer.name + "." + route) }
+                if (verified.upgrade != null) TurboLink.negotiate(context,verified,frames,initiator,trust)
+                else if (upgrade) mutable.update { it.copy(status = "Verified. Enable a direct link on both paired phones to try Turbo.") }
             } catch (e: Exception) {
                 val message = when {
                     SystemClock.elapsedRealtime() >= deadline -> "Pairing timed out. Start again on both phones."

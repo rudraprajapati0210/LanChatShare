@@ -27,8 +27,8 @@ internal interface MessageDao {
     @Query("SELECT * FROM messages WHERE peerId = :peer ORDER BY time, rowid")
     fun conversation(peer: String): Flow<List<ChatMessage>>
 
-    @Query("SELECT * FROM messages WHERE peerId = :peer AND outgoing = 1 AND delivered = 0 AND attachment = 0 ORDER BY time, rowid LIMIT 1")
-    fun next(peer: String): Flow<ChatMessage?>
+    @Query("SELECT * FROM messages WHERE peerId = :peer AND outgoing = 1 AND delivered = 0 AND attachment = 0 ORDER BY time, rowid LIMIT 8")
+    fun pending(peer: String): Flow<List<ChatMessage>>
 
     @Query("UPDATE messages SET delivered = 1 WHERE peerId = :peer AND id = :id AND outgoing = 1 AND attachment = :attachment")
     suspend fun acknowledge(peer: String, id: String, attachment: Boolean = false)

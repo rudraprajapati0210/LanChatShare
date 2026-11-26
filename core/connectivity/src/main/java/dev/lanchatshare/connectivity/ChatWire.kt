@@ -67,10 +67,11 @@ internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore,
     val downloads = mutableMapOf<String, Job>()
     val sender = launch {
         while (isActive) {
-            val next = trust.messages.next(peer.id).filterNotNull().first()
-            ws.write(ChatFrame("text", id = next.id, text = next.text))
+            val batch = trust.messages.pending(peer.id).first { it.isNotEmpty() }
+            batch.forEach { ws.write(ChatFrame("text", id = it.id, text = it.text)) }
+            val ids = batch.mapTo(mutableSetOf()) { it.id }
             val acknowledged = withTimeoutOrNull(20000) {
-                trust.messages.next(peer.id).first { it?.id != next.id }
+                trust.messages.pending(peer.id).first { rows -> rows.none { it.id in ids } }
                 true
             } ?: false
             if (!acknowledged) {

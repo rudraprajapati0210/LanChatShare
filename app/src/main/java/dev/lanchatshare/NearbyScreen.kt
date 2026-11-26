@@ -71,6 +71,21 @@ import dev.lanchatshare.data.Profile
         onDispose { radio?.close() }
     }
     val state = radio?.state?.collectAsStateWithLifecycle()?.value ?: NearbyState()
+    val turbo = TurboLink.mode(context)
+    val turboStatus by TurboLink.status.collectAsStateWithLifecycle()
+    var directAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val wifiPermission = if (Build.VERSION.SDK_INT >= 33) NEARBY_WIFI_DEVICES else ACCESS_FINE_LOCATION
+    val askWifi = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        if (it[wifiPermission] == true) directAction?.invoke()
+        directAction = null
+    }
+    fun withWifi(action: () -> Unit) {
+        if (context.checkSelfPermission(wifiPermission) == PackageManager.PERMISSION_GRANTED) action()
+        else {
+            directAction = action
+            askWifi.launch(if (Build.VERSION.SDK_INT >= 33) arrayOf(wifiPermission) else arrayOf(ACCESS_COARSE_LOCATION,ACCESS_FINE_LOCATION))
+        }
+    }
     LaunchedEffect(state.status, foreground) {
         if (allowed && !hasPermissions()) refresh++
     }
@@ -97,9 +112,17 @@ import dev.lanchatshare.data.Profile
                 }
             }
         }
+        if (turbo != TurboMode.Off && radio != null) item {
+            TextButton(onClick = { withWifi { radio.allowNextUpgrade() } }) { Text("Allow next direct link") }
+            if (turboStatus.isNotBlank()) Text(turboStatus)
+            TextButton(onClick = { TurboLink.stop() }) { Text("Close direct link") }
+        }
         items(state.devices.values.sortedBy { it.name }, key = { it.address }) { peer ->
             OutlinedButton(enabled = !state.busy && !state.failed, onClick = { radio?.connect(peer) }) {
                 Text(peer.name.ifBlank { "Nearby phone" } + " · " + peer.suffix)
+            }
+            if (turbo != TurboMode.Off && trusted.any { it.id.endsWith(peer.suffix,true) }) {
+                TextButton(enabled = !state.busy, onClick = { withWifi { radio?.connect(peer,true) } }) { Text("Try direct link") }
             }
         }
         if (trusted.isNotEmpty()) item { Text("Trusted devices", style = MaterialTheme.typography.titleMedium) }

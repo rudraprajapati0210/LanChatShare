@@ -61,6 +61,17 @@ private object LocalHotspot {
     }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(status, style = MaterialTheme.typography.titleMedium)
+        var turbo by remember { mutableStateOf(dev.lanchatshare.connectivity.TurboLink.mode(context)) }
+        Text("Turbo transfer", style = MaterialTheme.typography.titleMedium)
+        Row {
+            dev.lanchatshare.connectivity.TurboMode.entries.forEach { mode ->
+                FilterChip(selected = turbo == mode, onClick = {
+                    turbo = mode
+                    dev.lanchatshare.connectivity.TurboLink.setMode(context,mode)
+                }, label = { Text(if (mode.name == "Ask") "Always ask" else mode.name) })
+            }
+        }
+        Text("Start a direct link from Nearby on two verified phones. Auto accepts a verified phone’s request while Nearby is open.")
         Text("Join the same router or phone hotspot. If a guest network keeps devices apart, try a phone hotspot.")
         val network = LocalHotspot.reservation
         if (network == null) {

@@ -12,7 +12,17 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.*
 
 internal data class LanLink(val address: InetAddress, val prefix: Int, val name: String, val broadcast: InetAddress?, val network: Network?) {
-    fun contains(other: InetAddress) = IpPrefix(address, prefix).contains(other)
+    fun contains(other: InetAddress): Boolean {
+        val local = address.address
+        val remote = other.address
+        if (local.size != remote.size || prefix !in 0..local.size * 8) return false
+        for (i in local.indices) {
+            val bits = (prefix - 8 * i).coerceIn(0, 8)
+            val mask = (0xff shl (8 - bits)) and 0xff
+            if (((local[i].toInt() xor remote[i].toInt()) and mask) != 0) return false
+        }
+        return true
+    }
 }
 @Suppress("DEPRECATION")
 internal fun lanLinks(context: Context): List<LanLink> {

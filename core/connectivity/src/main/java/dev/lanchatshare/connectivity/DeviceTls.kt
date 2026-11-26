@@ -29,7 +29,10 @@ internal fun transportKey(store: KeyStore, alias: String): KeyPair {
     return result
 }
 
-internal fun serverTls(credentials: Credentials, trusted: () -> Map<String,String>): SSLContext {
+internal fun serverTls(credentials: Credentials, trusted: () -> Map<String,String>): SSLContext =
+    deviceTls(credentials, trusted, false).first
+
+internal fun deviceTls(credentials: Credentials, trusted: () -> Map<String,String>, client: Boolean): Pair<SSLContext,X509TrustManager> {
     val key = credentials.key
     val keys = object : X509ExtendedKeyManager() {
         override fun getPrivateKey(alias: String?) = if (alias == TLS_ALIAS) key else null
@@ -38,13 +41,17 @@ internal fun serverTls(credentials: Credentials, trusted: () -> Map<String,Strin
         override fun chooseServerAlias(type: String?, issuers: Array<out Principal>?, socket: Socket?) = TLS_ALIAS.takeIf { type == "RSA" }
         override fun getServerAliases(type: String?, issuers: Array<out Principal>?) = arrayOf(TLS_ALIAS).takeIf { type == "RSA" }
         override fun getClientAliases(type: String?, issuers: Array<out Principal>?): Array<String>? = null
-        override fun chooseClientAlias(types: Array<out String>?, issuers: Array<out Principal>?, socket: Socket?): String? = null
+        override fun chooseClientAlias(types: Array<out String>?, issuers: Array<out Principal>?, socket: Socket?): String? =
+            TLS_ALIAS.takeIf { client && types?.contains("RSA") == true }
     }
     val peers = object : X509TrustManager {
         override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
         override fun checkClientTrusted(chain: Array<X509Certificate>, auth: String) { verifyBinding(chain, trusted()) }
-        override fun checkServerTrusted(chain: Array<X509Certificate>, auth: String) { throw CertificateException("Server-only context") }
+        override fun checkServerTrusted(chain: Array<X509Certificate>, auth: String) {
+            if (!client) throw CertificateException("Server-only context")
+            verifyBinding(chain, trusted())
+        }
     }
-    return SSLContext.getInstance("TLS").apply { init(arrayOf(keys), arrayOf(peers), null) }
+    return SSLContext.getInstance("TLS").apply { init(arrayOf(keys), arrayOf(peers), null) } to peers
 }
 

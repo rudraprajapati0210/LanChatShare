@@ -34,6 +34,7 @@ internal object TransferMeter {
         var last = start; var offset = initial; var min = Double.POSITIVE_INFINITY; var max = 0.0
         var onMs = 0L; var offMs = 0L; var onBytes = 0L; var offBytes = 0L
         var lastProgress = start; var stalls = 0; var stalled = false; var retries = 0; var state = ""
+        var compared = false
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -64,6 +65,17 @@ internal object TransferMeter {
                 }
                 s.on=screen; s.last=now; s.offset=row.offset; s.min=minOf(s.min,speed); s.max=maxOf(s.max,speed)
                 val rate=Rate(speed,avg,if(speed>0) kotlin.math.ceil((row.size-row.offset)/1e6/speed).toLong() else null,chat.paths.value[row.peer])
+                if (!s.compared && !row.outgoing && now-s.start >= 15000 && row.offset-s.initial >= 8_000_000 &&
+                    row.state == "active" && rate.path in listOf("Wi-Fi Direct","Local hotspot")) {
+                    s.compared = true
+                    val history = prefs(c).all.entries.asSequence().filter { it.key.startsWith(row.peer + "/") }
+                        .mapNotNull { (it.value as? String)?.let(::JSONObject) }
+                        .filter { it.optBoolean("benchmark") && it.optString("direction") == "receive" &&
+                            it.optString("path") == "Wi-Fi client (router or hotspot)" && it.optLong("sizeBytes") == row.size &&
+                            (if (screen) it.optLong("screenOnMs") else it.optLong("screenOffMs")) >= it.optLong("elapsedMs") * 0.9 }
+                        .maxByOrNull { it.optLong("endedAt") }
+                    if (history != null) TurboLink.compareSpeed(row.peer,avg,history.optDouble("averageMBps",0.0))
+                }
                 rates.update { it + (key to rate) }
                 if (row.state=="done") {
                     val info = wifiInfo(c)
@@ -75,6 +87,7 @@ internal object TransferMeter {
                         .put("screenOffMBps",if(s.offMs>0)s.offBytes/1000.0/s.offMs else JSONObject.NULL)
                         .put("retriesObserved",s.retries).put("stallsObserved",s.stalls).put("processCpuMs",Process.getElapsedCpuTime()-s.cpu)
                         .put("frequencyMHz",info?.frequency ?: -1).put("linkMbps",info?.linkSpeed ?: -1)
+                        .put("rssiDbm",info?.rssi ?: JSONObject.NULL)
                         .put("path",chat.paths.value[row.peer] ?: "unknown").put("endedAt",System.currentTimeMillis())
                     prefs(c).edit().putString(key,record.toString()).apply()
                     samples.remove(key); reportRevision.value++
