@@ -4,6 +4,8 @@
 
 [Two-phone acceptance checklist](docs/TWO_PHONE_CHECKLIST.md)
 
+For slow transfers, record the route, screen state and units alongside the Diagnostics report. A displayed Wi-Fi link rate is a radio estimate. The planned debug ceiling test will measure usable TCP throughput for comparison. [Transfer-speed investigation](docs/research/transfer-speed.md)
+
 Chats opens directly after the one-time name prompt. Verify a phone in Nearby, then tap its name in Chats to send text over local Wi-Fi. Both phones need this build and local network access. A previously verified phone keeps its pairing when you install the update over the earlier APK.
 
 ## Check chat on two phones

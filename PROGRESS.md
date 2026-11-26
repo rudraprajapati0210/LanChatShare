@@ -2,9 +2,11 @@
 
 ## Current verification
 
+Transfer speed is the current priority. Two real phones completed a file over 4 GB at a reported 0.73 MB/s. Phase 0 research is complete. **Next (Phase 1):** extend the existing Diagnostics report with both units and pipeline timings, add debug-only synthetic TCP and pinned-TLS ceiling probes, then compare the same route and screen state before changing the transfer pipeline. [Research and decisions](docs/research/transfer-speed.md)
+
 The full corrected API 37 Android suite passed (15 substantive tests, plus the separately invoked two-device benchmark). The 100 MB range comparison finished with verified receipts and SHA-256 at one, two and four streams. Throughput was 0.388, 0.996 and 1.165 MB/s respectively on virtual Wi-Fi. See [measurements and chat latency](docs/BENCHMARKS.md). The production default remains one stream.
 
-**Next step** is the physical two-phone comparison. Start with Turbo Off on the same router, run the 100 MB and 1 GB Diagnostics benchmarks, then repeat with a direct link and export results. Use the [two-phone checklist](docs/TWO_PHONE_CHECKLIST.md) for screen-off transfer, hotspot rejoin, media codecs and 60/120 Hz motion checks.
+For the physical comparison, start with Turbo Off on the same router, run the 100 MB and 1 GB Diagnostics benchmarks, then repeat with a direct link and export results. Use the [two-phone checklist](docs/TWO_PHONE_CHECKLIST.md) for screen-off transfer and hotspot rejoin.
 
 ## Previous verification
 
