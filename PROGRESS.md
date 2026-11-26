@@ -2,6 +2,8 @@
 
 ## Current verification
 
+The Android media regression verified that Original retains the source SHA-256 and Standard converts a 1920 × 960 PNG into a 1600 × 800 JPEG. Video encoder interoperability still requires a physical-phone check.
+
 The routed TLS regression reproduced on API 37. Conscrypt tried a raw RSA operation while signing the handshake and Keystore rejected the padding. A separately certified P-256 signing key fixes the platform path, while the original paired identity and CIO credentials continue to work. The targeted Android test passed with wrong-pin rejection and durable resume. The full debug build, JVM tests and lint passed. Next: collect the full corrected Android suite result and the 100 MB range timing comparison.
 
 ## Earlier checkpoints
