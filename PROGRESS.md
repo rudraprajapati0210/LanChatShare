@@ -2,6 +2,8 @@
 
 ## Current verification
 
+Phase 1 instrumentation is implemented. Diagnostics exports file-stage counters and both speed units, and the debug build can compare the active paired route with memory-only TCP and pinned TLS. The debug build, release Kotlin compile, 19 JVM tests, Android lint (zero errors) and all 17 substantive Android regression tests passed. The background-notification tests require notification permission on the test installation. Next: collect the 100 MB two-emulator comparison, then run the same test on the physical router and hotspot before tuning.
+
 Transfer speed is the current priority. Two real phones completed a file over 4 GB at a reported 0.73 MB/s. Phase 0 research is complete. **Next (Phase 1):** extend the existing Diagnostics report with both units and pipeline timings, add debug-only synthetic TCP and pinned-TLS ceiling probes, then compare the same route and screen state before changing the transfer pipeline. [Research and decisions](docs/research/transfer-speed.md)
 
 The full corrected API 37 Android suite passed (15 substantive tests, plus the separately invoked two-device benchmark). The 100 MB range comparison finished with verified receipts and SHA-256 at one, two and four streams. Throughput was 0.388, 0.996 and 1.165 MB/s respectively on virtual Wi-Fi. See [measurements and chat latency](docs/BENCHMARKS.md). The production default remains one stream.

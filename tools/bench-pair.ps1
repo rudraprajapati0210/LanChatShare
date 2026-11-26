@@ -4,6 +4,7 @@ param(
     [string]$Sizes = '10,30,100,500,1000',
     [ValidateSet(262144,524288,1048576,2097152,4194304)][int]$WindowBytes = 262144,
     [ValidateSet(1,2,3,4)][int]$Streams = 1,
+    [switch]$Ceiling,
     [string]$Output = (Join-Path $env:TEMP ('lcs-benchmark-' + (Get-Date -Format yyyyMMdd-HHmmss)))
 )
 $ErrorActionPreference = 'Stop'
@@ -26,6 +27,10 @@ if ($pins[$Sender] -eq $pins[$Receiver]) { throw 'Separate Keystore identities r
 $route = (& $adb -s $Sender shell ip -4 -br addr show wlan0) -join ' '
 if ($route -notmatch '(\d+\.\d+\.\d+\.\d+)/') { throw 'Wi-Fi IPv4 address unavailable' }
 $address = $Matches[1]
+$receiverRoute = (& $adb -s $Receiver shell ip -4 -br addr show wlan0) -join ' '
+if ($receiverRoute -notmatch '(\d+\.\d+\.\d+\.\d+)/') { throw 'Receiver Wi-Fi IPv4 address unavailable' }
+$receiverAddress = $Matches[1]
+$probe = $Ceiling.IsPresent.ToString().ToLowerInvariant()
 foreach ($device in $Sender,$Receiver) { & $adb -s $device shell pm grant dev.lanchatshare.connectivity.test android.permission.ACCESS_LOCAL_NETWORK }
 function Read-Trace($device) {
     & $adb -s $device logcat -v epoch -d -s LcsBench:I | Where-Object {
@@ -33,13 +38,13 @@ function Read-Trace($device) {
     }
 }
 try {
-    $server = Start-Process $adb -WindowStyle Hidden -PassThru -ArgumentList @('-s',$Sender,'shell','am','instrument','-w','-e','class',$testClass,'-e','role','send','-e','pin',$pins[$Receiver],'-e','sizes',$Sizes,'-e','host',$address,$runner) -RedirectStandardOutput (Join-Path $Output 'sender.txt')
+    $server = Start-Process $adb -WindowStyle Hidden -PassThru -ArgumentList @('-s',$Sender,'shell','am','instrument','-w','-e','class',$testClass,'-e','ceiling',$probe,'-e','remote',$receiverAddress,'-e','role','send','-e','pin',$pins[$Receiver],'-e','sizes',$Sizes,'-e','host',$address,$runner) -RedirectStandardOutput (Join-Path $Output 'sender.txt')
     for ($i=0; $i -lt 90; $i++) {
         if ((Read-Trace $Sender) -match 'READY') { break }
         if ($server.HasExited) { throw 'Sender stopped before listener started' }
         Start-Sleep 1
     }
-    & $adb -s $Receiver shell am instrument -w -e class $testClass -e role receive -e pin $pins[$Sender] -e sizes $Sizes -e windowBytes $WindowBytes -e streams $Streams -e host $address $runner | Tee-Object (Join-Path $Output 'receiver.txt')
+    & $adb -s $Receiver shell am instrument -w -e class $testClass -e role receive -e ceiling $probe -e remote $address -e pin $pins[$Sender] -e sizes $Sizes -e windowBytes $WindowBytes -e streams $Streams -e host $address $runner | Tee-Object (Join-Path $Output 'receiver.txt')
     if (!(Get-Content (Join-Path $Output 'receiver.txt') | Select-String 'OK \(1 test\)')) { throw 'Receiver failed; see traces' }
     if (!$server.WaitForExit(15000)) { throw 'Sender missing final receipt' }
 } finally {

@@ -17,18 +17,24 @@ internal class ChunkMismatch : IOException("Range block checksum mismatch")
 
 internal fun encodedSize(length: Long) = length + 4 * ((length + RANGE_BLOCK - 1) / RANGE_BLOCK)
 
-internal suspend fun writeBlocks(input: RandomAccessFile, output: OutputStream, length: Long, allow: suspend () -> Boolean) {
+internal suspend fun writeBlocks(input: RandomAccessFile, output: OutputStream, length: Long, timings: RangeTimings? = null, allow: suspend () -> Boolean) {
     val buffer = ByteArray(RANGE_BLOCK)
     val crc = CRC32()
     var sent = 0L
     while (sent < length) {
         if (sent % (4L * RANGE_BLOCK) == 0L && !allow()) throw IOException("Transfer no longer active")
         val n = minOf(length-sent, buffer.size.toLong()).toInt()
+        val reading = if (timings != null) System.nanoTime() else 0L
         input.readFully(buffer,0,n)
+        timings?.record("sourceRead",reading)
+        val hashing = if (timings != null) System.nanoTime() else 0L
         crc.reset(); crc.update(buffer,0,n)
         val sum = crc.value
+        timings?.record("crc",hashing)
+        val writing = if (timings != null) System.nanoTime() else 0L
         output.write(byteArrayOf((sum ushr 24).toByte(),(sum ushr 16).toByte(),(sum ushr 8).toByte(),sum.toByte()))
         output.write(buffer,0,n)
+        timings?.record("bodyWrite",writing)
         sent += n
     }
 }
@@ -39,6 +45,7 @@ internal suspend fun ByteReadChannel.readBlock(buffer: ByteArray, length: Int, c
 
 internal suspend fun ByteReadChannel.readBlock(buffer: ByteArray, length: Int, checked: Boolean, progress: () -> Unit, timings: RangeTimings?) {
     val header = ByteArray(4)
+    val reading = if (timings != null) System.nanoTime() else 0L
     if (checked) readFully(header)
     var offset = 0
     while (offset < length) {
@@ -46,6 +53,7 @@ internal suspend fun ByteReadChannel.readBlock(buffer: ByteArray, length: Int, c
         if (n == -1) throw java.io.EOFException("Range ended inside block")
         if (n > 0) { offset += n; progress() }
     }
+    timings?.record("bodyRead",reading)
     if (checked) {
         val started = if (timings != null) System.nanoTime() else 0L
         val expected = header.fold(0L) { value,b -> (value shl 8) or (b.toLong() and 255) }

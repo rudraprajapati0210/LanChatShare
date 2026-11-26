@@ -43,6 +43,19 @@ class TwoDeviceBenchmark {
             }
         }
         try {
+            if (args.getString("ceiling") == "true") {
+                val remote = java.net.InetAddress.getByName(args.getString("remote")!!)
+                val link = lanLinks(ctx).first { it.contains(remote) }
+                val route = ProbeRoute(peer,tls,remote,link.address,link.network)
+                if (serverSide) Log.i("LcsBench","READY CEILING")
+                if (!serverSide) delay(1000)
+                ProbeSockets().use { sockets ->
+                    ceilingPair(route,serverSide,100,sockets) { rate ->
+                        Log.i("LcsBench","CEILING ${rate.mode} bytes=${rate.bytes} ns=${rate.nanos} MBps=${rate.mbps}")
+                    }
+                }
+                if (!serverSide) delay(2000)
+            }
             if (serverSide) {
                 val server = chatServer(listOf(host),47831,serverTls(tls) { mapOf(peer.id to peer.pin) },store.transfers) {
                     chat(authenticateIncoming(local.id,store),store,flowOf(local))

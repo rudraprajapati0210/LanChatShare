@@ -56,3 +56,7 @@ Each transfer offer identifies the intended recipient, transfer UUID, immutable 
 - G: Check foreground/background transitions, notification actions, biometric lock, encrypted restore, battery use and simultaneous transfers on multiple manufacturers.
 
 
+
+## Debug throughput measurement
+
+A user starts both ends of a test on the active paired route. The sender binds port 47839 to the selected local address for a single TLS control connection. The receiver binds the outbound socket to the same network used by that peer. Each side verifies the existing identity binding and the client checks the device hostname. After size agreement, TLS carries a random 32-byte proof and an ephemeral TCP port. Only the expected peer address presenting that proof receives the synthetic buffer. The receiver counts the agreed bytes and acknowledges each test on TLS. The second test streams the same number of bytes through the TLS socket. Cancellation, route loss and timeout close all probe sockets. Only debug source sets contain this protocol. File grants, file bytes and chat messages stay on their existing authenticated paths.

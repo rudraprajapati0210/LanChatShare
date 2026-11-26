@@ -35,11 +35,15 @@ internal fun Route.fileRanges(files: Transfers) {
                     withContext(Dispatchers.IO) {
                         RandomAccessFile(files.file(row),"r").use { source ->
                             source.seek(start)
-                            writeBlocks(source,sink,length) { files.dao.granted(row.id,auth.removePrefix("Bearer ")) != null }
+                            writeBlocks(source,sink,length,files.timings(row)) { files.dao.granted(row.id,auth.removePrefix("Bearer ")) != null }
                         }
                     }
                 }
+                val timings = files.timings(row)
+                if (end+1 == row.size) timings?.payloadSent()
+                val saving = if (timings != null) System.nanoTime() else 0L
                 files.dao.progress(row.peer,true,row.id,end+1)
+                timings?.record("roomProgress",saving)
                 return@duringTransfer
             }
             val bytes = withContext(Dispatchers.IO) {
@@ -62,7 +66,7 @@ internal suspend fun Transfers.receive(
     token: String,
     preferredWindow: Int = RANGE_BLOCK,
     streams: Int = 1,
-    timings: RangeTimings? = null,
+    timings: RangeTimings? = timings(row),
 ) = withContext(Dispatchers.IO) {
     require(preferredWindow in RANGE_BLOCK..WINDOW_BYTES && preferredWindow % RANGE_BLOCK == 0)
     require(streams in 1..4)
@@ -134,7 +138,9 @@ internal suspend fun Transfers.receive(
                                         channel.readBlock(buffer,n,checked,heartbeat,timings)
                                         timings?.record("bodyIncludingCrc",reading)
                                         try {
+                                            val writing = if (timings != null) System.nanoTime() else 0L
                                             out.seek(start); out.write(buffer,0,n); start += n
+                                            timings?.record("diskWrite",writing)
                                             if (start > end || start % (4L*RANGE_BLOCK) == 0L) {
                                                 val syncing = if (timings != null) System.nanoTime() else 0L
                                                 out.fd.sync()
@@ -172,7 +178,10 @@ internal suspend fun Transfers.receive(
                     }
                 }
                 if (!active()) return@duringTransfer true
-                if (part.length() != row.size || fileHash(part.inputStream()) != row.hash) {
+                val hashing = if (timings != null) System.nanoTime() else 0L
+                val valid = part.length() == row.size && fileHash(part.inputStream()) == row.hash
+                timings?.record("finalSha256",hashing)
+                if (!valid) {
                     part.delete()
                     dao.checkpoint(row.peer, row.id, 0)
                     dao.change(row.peer, false, row.id, "active", "invalid")

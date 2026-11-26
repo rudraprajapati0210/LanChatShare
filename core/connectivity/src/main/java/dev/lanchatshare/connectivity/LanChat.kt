@@ -202,6 +202,9 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         val link = address?.let { ip -> lanLinks(context).firstOrNull { it.contains(ip) } }
         val path = when { link == null -> "Local LAN"; link.name.startsWith("p2p") -> "Wi-Fi Direct"; link.network == null -> "Downstream Wi-Fi / hotspot"; else -> "Wi-Fi client (router or hotspot)" }
         routeNames.update { it + (peer.id to (bound?.medium ?: path)) }
+        val diagnosticSession = if (address != null && (bound != null || link != null)) {
+            diagnosticRoute(trust.transfers,peer,credentials,address,bound?.local ?: requireNotNull(link).address,bound?.network ?: link?.network)
+        } else null
         change(1)
         attempts.update { it - peer.id }
         try {
@@ -215,7 +218,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                     }
                 }
             }
-        } finally { change(-1) }
+        } finally { diagnosticSession?.close(); change(-1) }
     }
 }
 

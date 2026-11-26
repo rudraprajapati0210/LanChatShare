@@ -4,9 +4,17 @@
 
 [Two-phone acceptance checklist](docs/TWO_PHONE_CHECKLIST.md)
 
-For slow transfers, record the route, screen state and units alongside the Diagnostics report. A displayed Wi-Fi link rate is a radio estimate. The planned debug ceiling test will measure usable TCP throughput for comparison. [Transfer-speed investigation](docs/research/transfer-speed.md)
+For slow transfers, record the route, screen state and units alongside the Diagnostics report. A displayed Wi-Fi link rate is a radio estimate. The debug build measures usable TCP and pinned-TLS throughput on the same paired route. [Transfer-speed investigation](docs/research/transfer-speed.md)
 
 Chats opens directly after the one-time name prompt. Verify a phone in Nearby, then tap its name in Chats to send text over local Wi-Fi. Both phones need this build and local network access. A previously verified phone keeps its pairing when you install the update over the earlier APK.
+
+## Measure a slow transfer
+
+1. Install the debug APK on both paired phones. Connect them to the same router and confirm a chat message delivers. Open Settings → Diagnostics → Transfer benchmark on each phone.
+2. On both phones select the other phone, 100 MB, and **Router**. Tap **Send here** on the sender, then **Receive here** on the receiver within one minute. Leave Diagnostics open. Both phones record the rate for TCP and then pinned TLS. The generated data stays in memory.
+3. Tap **Run benchmark** on the same sender and accept the generated file on the receiver. Wait for completion. Copy or export JSON on **both** phones. Match file reports by transfer ID. Use receiver rates to calculate file MB/s divided by TCP MB/s on that route. An exported setup label records what you selected; the separate path field records what the app observed.
+4. Repeat three times, then repeat on a phone hotspot with **Hotspot** selected. Record which phone hosts. Test each direction and screen state separately, and use **Direct** when comparing a negotiated Turbo link. Keep transfer size, direction and phone placement constant within each comparison. Record a missing radio field as unknown.
+5. The debug probe sends TCP and TLS sequentially. Setup time is excluded. The plain socket accepts a one-use proof from the paired TLS session. You can cancel by leaving Diagnostics. The ordinary file test includes disk I/O and integrity verification. Stage times overlap; TLS encryption and decryption execute inside the providers and are included in the I/O spans. The TCP/TLS difference measures the combined transport overhead under those conditions.
 
 ## Check chat on two phones
 

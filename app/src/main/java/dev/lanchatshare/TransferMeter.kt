@@ -26,15 +26,47 @@ internal object TransferMeter {
         Rate(avg,avg,0,JSONObject(it).optString("path"))
     }
     fun report(c: Context): String = org.json.JSONArray().apply {
-        prefs(c).all.values.filterIsInstance<String>().map(::JSONObject).filter { it.optBoolean("benchmark") }
-            .sortedBy { it.optLong("endedAt") }.forEach { put(it) }
+        val rows = prefs(c).all.values.filterIsInstance<String>().map(::JSONObject)
+            .filter { it.optBoolean("benchmark") }.sortedBy { it.optLong("endedAt") }
+        val probes = rows.filter { it.optString("kind") == "memory" }
+        for (row in rows) {
+            if (row.optString("kind") == "file" && row.optLong("measuredFromOffset") == 0L) {
+                val elapsed = row.optLong("elapsedMs")
+                val on = when {
+                    elapsed <= 0 -> null
+                    row.optLong("screenOnMs") >= elapsed * 0.95 -> true
+                    row.optLong("screenOffMs") >= elapsed * 0.95 -> false
+                    else -> null
+                }
+                if (on != null) for (mode in listOf("TCP","TLS")) {
+                    val match = probes.lastOrNull { probe ->
+                        val age = row.optLong("endedAt") - probe.optLong("endedAt")
+                        age in 0..7_200_000L && probe.optString("transport") == mode &&
+                            listOf("peerId","direction","path","testSetup").all { row.optString(it) == probe.optString(it) } &&
+                            probe.optLong("sizeBytes") == row.optLong("sizeBytes") &&
+                            probe.optBoolean("screenOnStart") == on && probe.optBoolean("screenOnEnd") == on &&
+                            probe.opt("frequencyMHz") == row.opt("frequencyMHz") && probe.optDouble("averageMBps") > 0
+                    }
+                    if (match != null) {
+                        row.put("percentOf" + mode,100 * row.getDouble("averageMBps") / match.getDouble("averageMBps"))
+                        row.put(mode + "ReferenceEndedAt",match.getLong("endedAt"))
+                    }
+                }
+            }
+            put(row)
+        }
     }.toString(2)
+
+    fun saveCeiling(c: Context, record: JSONObject) {
+        prefs(c).edit().putString("ceiling/" + java.util.UUID.randomUUID(), record.put("benchmark",true).toString()).apply()
+        reportRevision.update { it + 1 }
+    }
 
     private class Sample(val start: Long,val initial: Long,val cpu: Long, var on: Boolean) {
         var last = start; var offset = initial; var min = Double.POSITIVE_INFINITY; var max = 0.0
         var onMs = 0L; var offMs = 0L; var onBytes = 0L; var offBytes = 0L
         var lastProgress = start; var stalls = 0; var stalled = false; var retries = 0; var state = ""
-        var compared = false
+        var publishNanos = 0L; var compared = false; var updates = 0; var fullOffsetAt: Long? = null
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -76,13 +108,23 @@ internal object TransferMeter {
                         .maxByOrNull { it.optLong("endedAt") }
                     if (history != null) TurboLink.compareSpeed(row.peer,avg,history.optDouble("averageMBps",0.0))
                 }
+                s.updates++
+                if (row.offset == row.size && row.state != "done" && s.fullOffsetAt == null) s.fullOffsetAt = now
+                val publishing = System.nanoTime()
                 rates.update { it + (key to rate) }
+                s.publishNanos += System.nanoTime() - publishing
                 if (row.state=="done") {
                     val info = radioReading(c,row.peer)
                     val record=JSONObject().put("benchmark",row.name.startsWith("LAN benchmark ") && row.mime=="application/octet-stream")
                         .put("sizeBytes",row.size).put("direction",if(row.outgoing) "send" else "receive")
                         .put("measuredFromOffset",s.initial).put("elapsedMs",now-s.start).put("averageMBps",avg)
-                        .put("minimumMBps",s.min).put("peakMBps",s.max).put("screenOnMs",s.onMs).put("screenOffMs",s.offMs)
+                        .put("testSetup",row.name.substringAfter(" MB - ","Unspecified").removeSuffix(".bin"))
+                        .put("peerId",row.peer).put("kind","file").put("transferId",row.id).put("averageMbitPerSec",avg*8)
+                        .put("minimumMbitPerSec",s.min*8).put("peakMbitPerSec",s.max*8)
+                        .put("stages",JSONObject(files.benchmarkStages(row))).put("progressSamples",s.updates)
+                        .put("observedFinalReceiptWaitMs",if(row.outgoing) s.fullOffsetAt?.let { now-it } ?: JSONObject.NULL else JSONObject.NULL)
+                        .put("publishProgressMs",s.publishNanos/1_000_000).put("tlsEncryptMs",JSONObject.NULL).put("tlsDecryptMs",JSONObject.NULL)
+                        .put("compression","none").put("minimumMBps",s.min).put("peakMBps",s.max).put("screenOnMs",s.onMs).put("screenOffMs",s.offMs)
                         .put("screenOnBytes",s.onBytes).put("screenOffBytes",s.offBytes).put("screenOnMBps",if(s.onMs>0)s.onBytes/1000.0/s.onMs else JSONObject.NULL)
                         .put("screenOffMBps",if(s.offMs>0)s.offBytes/1000.0/s.offMs else JSONObject.NULL)
                         .put("retriesObserved",s.retries).put("stallsObserved",s.stalls).put("processCpuMs",Process.getElapsedCpuTime()-s.cpu)
@@ -90,7 +132,7 @@ internal object TransferMeter {
                         .put("rssiDbm",info.rssi ?: JSONObject.NULL)
                         .put("path",chat.paths.value[row.peer] ?: "unknown").put("endedAt",System.currentTimeMillis())
                     prefs(c).edit().putString(key,record.toString()).apply()
-                    samples.remove(key); reportRevision.value++
+                    samples.remove(key); reportRevision.update { it + 1 }
                 }
             }
             val live=rows.filter { it.state in listOf("active","retrying","paused") }.map { it.meterKey() }.toSet()

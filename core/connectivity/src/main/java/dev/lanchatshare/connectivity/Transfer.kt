@@ -52,6 +52,14 @@ internal fun fileHash(input: InputStream): String = input.use {
 }
 
 class Transfers internal constructor(private val context: Context, private val db: TrustDatabase) {
+    private val profiles = object : LinkedHashMap<String, RangeTimings>(32, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, RangeTimings>?) = size > 64
+    }
+    internal fun timings(row: Transfer): RangeTimings? {
+        if (!row.name.startsWith("LAN benchmark ") || row.mime != "application/octet-stream") return null
+        return synchronized(profiles) { profiles.getOrPut("${row.peer}/${row.outgoing}/${row.id}") { RangeTimings() } }
+    }
+    fun benchmarkStages(row: Transfer) = timings(row)?.snapshot().orEmpty()
     val storageUsage = db.transfers().storedBytes()
     fun library(filter: LibraryFilter) = androidx.paging.Pager(androidx.paging.PagingConfig(50, enablePlaceholders = false)) {
         dao.library(filter.query())
@@ -98,9 +106,10 @@ class Transfers internal constructor(private val context: Context, private val d
             } finally { temp.delete() }
         } else stage(peers, name, mime, thumbnail) { requireNotNull(resolver.openInputStream(uri)) }
     }
-    suspend fun addBenchmark(peer: TrustedPeer, megabytes: Int) {
+    suspend fun addBenchmark(peer: TrustedPeer, megabytes: Int, setup: String = "Unspecified") {
         require(megabytes in listOf(10, 100, 1000))
-        stage(listOf(peer), "LAN benchmark ${megabytes} MB.bin", "application/octet-stream") {
+        require(setup in listOf("Router","Hotspot","Direct","Unspecified"))
+        stage(listOf(peer), "LAN benchmark ${megabytes} MB - $setup.bin", "application/octet-stream") {
             val block = ByteArray(65536).also(java.util.Random(147)::nextBytes)
             object : InputStream() {
                 var remaining = megabytes * 1_000_000L
@@ -133,11 +142,13 @@ class Transfers internal constructor(private val context: Context, private val d
         val stored = File(directory, "sent/$id")
         try {
             open().use { input -> temp.outputStream().use { input.copyTo(it) } }
+            val hashing = System.nanoTime()
             val hash = fileHash(temp.inputStream())
             val name = title.filter { it >= ' ' && it !in "/\\" }.take(200).ifBlank { "Attachment" }
             val rows = peers.distinctBy { it.id }.map { peer ->
                 val row = Transfer(peer.id, true, id, name, mime.take(127), temp.length(), hash,
                     peer.pin, UUID.randomUUID().toString(), "offered", 0, System.currentTimeMillis())
+                timings(row)?.record("stagingSha256",hashing)
                 row
             }
             stored.parentFile!!.mkdirs()
@@ -192,6 +203,7 @@ class Transfers internal constructor(private val context: Context, private val d
     internal suspend fun receipt(peer: TrustedPeer, id: String) = db.withTransaction {
         val row = dao.get(peer.id, true, id) ?: return@withTransaction
         if (row.pin == peer.pin && row.state in listOf("active","paused")) {
+            timings(row)?.receipt()
             dao.change(row.peer, true, row.id, row.state, "done")
             dao.progress(row.peer, true, row.id, row.size)
             db.messages().acknowledge(row.peer, row.id, attachment = true)
