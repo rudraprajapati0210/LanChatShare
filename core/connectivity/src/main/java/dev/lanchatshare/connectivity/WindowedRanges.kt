@@ -34,6 +34,10 @@ internal suspend fun writeBlocks(input: RandomAccessFile, output: OutputStream, 
 }
 
 internal suspend fun ByteReadChannel.readBlock(buffer: ByteArray, length: Int, checked: Boolean, progress: () -> Unit) {
+    readBlock(buffer,length,checked,progress,null)
+}
+
+internal suspend fun ByteReadChannel.readBlock(buffer: ByteArray, length: Int, checked: Boolean, progress: () -> Unit, timings: RangeTimings?) {
     val header = ByteArray(4)
     if (checked) readFully(header)
     var offset = 0
@@ -43,8 +47,10 @@ internal suspend fun ByteReadChannel.readBlock(buffer: ByteArray, length: Int, c
         if (n > 0) { offset += n; progress() }
     }
     if (checked) {
+        val started = if (timings != null) System.nanoTime() else 0L
         val expected = header.fold(0L) { value,b -> (value shl 8) or (b.toLong() and 255) }
         if (CRC32().apply { update(buffer,0,length) }.value != expected) throw ChunkMismatch()
+        timings?.record("crc",started)
     }
 }
 

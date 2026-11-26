@@ -83,7 +83,10 @@ class TwoDeviceBenchmark {
                             authenticateOutgoing(local.id,peer,identityKeys(),null)
                             chat(peer,store,flowOf(local)) { row,token ->
                                 val window = args.getString("windowBytes")?.toInt() ?: RANGE_BLOCK
-                                while (!store.transfers.receive(row,http,origin,token,window)) { Log.i("LcsBench","RETRY ${row.id}"); delay(1000) }
+                                val streams = args.getString("streams")?.toInt() ?: 1
+                                val timings = RangeTimings().takeIf { streams == 1 }
+                                while (!store.transfers.receive(row,http,origin,token,window,streams,timings)) { Log.i("LcsBench","RETRY ${row.id}"); delay(1000) }
+                                if (timings != null) Log.i("LcsBench","PROFILE ${row.size} ${timings.summary()}")
                             }
                         }
                     }

@@ -61,8 +61,11 @@ internal suspend fun Transfers.receive(
     origin: String,
     token: String,
     preferredWindow: Int = RANGE_BLOCK,
+    streams: Int = 1,
+    timings: RangeTimings? = null,
 ) = withContext(Dispatchers.IO) {
     require(preferredWindow in RANGE_BLOCK..WINDOW_BYTES && preferredWindow % RANGE_BLOCK == 0)
+    require(streams in 1..4)
     val lock = downloadLock[(row.id.hashCode() and Int.MAX_VALUE) % downloadLock.size]
     lock.lock()
     try {
@@ -86,18 +89,39 @@ internal suspend fun Transfers.receive(
                     }
                     val buffer = ByteArray(RANGE_BLOCK)
                     var window = RANGE_BLOCK // First request also negotiates compatibility with older peers.
+                    var supportsChecks = false
                     while (start < row.size && active()) {
                         val begin = start
                         val length = minOf(row.size-begin,window.toLong())
                         val end = begin + length - 1
                         var diskError = false
                         try {
+                            if (supportsChecks && streams > 1) {
+                                val pieces = coroutineScope {
+                                    (0 until streams).map { begin + it * window.toLong() }.takeWhile { it < row.size }.map { offset ->
+                                        async {
+                                            val count = minOf(window.toLong(), row.size-offset).toInt()
+                                            readSegment(client,origin,row.id,token,offset,count,row.size)
+                                        }
+                                    }.awaitAll()
+                                }
+                                for (piece in pieces) {
+                                    if (!active()) return@duringTransfer true
+                                    try { out.seek(start); out.write(piece); out.fd.sync() }
+                                    catch (e: java.io.IOException) { diskError = true; throw e }
+                                    start += piece.size
+                                    dao.progress(row.peer,false,row.id,start)
+                                }
+                                continue
+                            }
                             val allowed = watchRange { heartbeat ->
+                                val requested = if (timings != null) System.nanoTime() else 0L
                                 client.prepareGet("$origin/v1/files/${row.id}") {
                                     header(HttpHeaders.Authorization,"Bearer $token")
                                     header(HttpHeaders.Range,"bytes=$begin-$end")
                                     header(HttpHeaders.Accept,RANGE_FORMAT)
                                 }.execute { response ->
+                                    timings?.record("responseHeaders",requested)
                                     if (response.status == HttpStatusCode.Forbidden) return@execute false
                                     val checked = response.headers[HttpHeaders.ContentType]?.substringBefore(';') == RANGE_FORMAT
                                     check(response.status == HttpStatusCode.PartialContent &&
@@ -106,18 +130,25 @@ internal suspend fun Transfers.receive(
                                     val channel = response.bodyAsChannel()
                                     while (start <= end) {
                                         val n = minOf(end-start+1,buffer.size.toLong()).toInt()
-                                        channel.readBlock(buffer,n,checked,heartbeat)
+                                        val reading = if (timings != null) System.nanoTime() else 0L
+                                        channel.readBlock(buffer,n,checked,heartbeat,timings)
+                                        timings?.record("bodyIncludingCrc",reading)
                                         try {
                                             out.seek(start); out.write(buffer,0,n); start += n
                                             if (start > end || start % (4L*RANGE_BLOCK) == 0L) {
+                                                val syncing = if (timings != null) System.nanoTime() else 0L
                                                 out.fd.sync()
+                                                timings?.record("diskSync",syncing)
+                                                val saving = if (timings != null) System.nanoTime() else 0L
                                                 dao.progress(row.peer,false,row.id,start)
+                                                timings?.record("roomProgress",saving)
                                                 if (!active()) return@execute false
                                             }
                                         } catch (e: java.io.IOException) { diskError = true; throw e }
                                         heartbeat()
                                     }
                                     window = if (checked) preferredWindow else RANGE_BLOCK
+                                    supportsChecks = checked
                                     true
                                 }
                             }
@@ -160,6 +191,31 @@ internal suspend fun Transfers.receive(
         true
     } finally { lock.unlock() }
 }
+
+private suspend fun readSegment(client: HttpClient, origin: String, id: String, token: String, start: Long, count: Int, size: Long): ByteArray =
+    watchRange { heartbeat ->
+        val end = start + count - 1
+        client.prepareGet("$origin/v1/files/$id") {
+            header(HttpHeaders.Authorization,"Bearer $token")
+            header(HttpHeaders.Range,"bytes=$start-$end")
+            header(HttpHeaders.Accept,RANGE_FORMAT)
+        }.execute { response ->
+            check(response.status == HttpStatusCode.PartialContent && response.headers[HttpHeaders.ContentRange] == "bytes $start-$end/$size" &&
+                response.headers[HttpHeaders.ContentType]?.substringBefore(';') == RANGE_FORMAT &&
+                response.headers[HttpHeaders.ContentLength]?.toLongOrNull() == encodedSize(count.toLong()))
+            val result = ByteArray(count)
+            val scratch = ByteArray(RANGE_BLOCK)
+            val input = response.bodyAsChannel()
+            var offset = 0
+            while (offset < count) {
+                val length = minOf(scratch.size,count-offset)
+                input.readBlock(scratch,length,true,heartbeat)
+                scratch.copyInto(result,offset,0,length)
+                offset += length
+            }
+            result
+        }
+    }
 
 internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files: Transfers) {
     var previous = emptySet<ChatFrame>()

@@ -1,5 +1,7 @@
 # LanChatShare progress
 
+The two-device harness accepts one, two or four concurrent streams. Parallel requests verify each frame and persist only consecutive verified blocks. Single-stream instrumentation reports response-header wait, body time including CRC, CRC time, disk sync and Room progress updates. Production still uses one stream. Next measurement is the same 100 MB file and window at each stream count with concurrent chat.
+
 Benchmark reports now read the selected direct network's radio information when Android exposes it. Direct sessions use the negotiated peer address for route labels. Teardown handles a delayed group-creation callback and a user switching Turbo off during negotiation. Debug assembly, all 19 JVM tests and lint passed on the current source.
 
 Library now pages sent and received files through indexed Room queries (schema 6), filters by category/direction/contact/date and supports local cleanup. Migration, file sharing and appearance are under Android acceptance testing. The saved source passes the JVM suite and debug lint. Next: verify multi-recipient file deletion, theme persistence and direct-socket TLS on Android, then profile the 100 MB receiver.
