@@ -24,6 +24,9 @@
         <receiver android:name=".MessageAction" android:exported="false"/>
         <receiver android:name=".TransferDecision" android:exported="false"/>
         <service android:name=".ChatService" android:foregroundServiceType="connectedDevice" android:exported="false"/>
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.library" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/library_paths"/>
+        </provider>
         <activity android:name=".MainActivity" android:launchMode="singleTop" android:exported="true" android:windowSoftInputMode="adjustResize">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
             <intent-filter>

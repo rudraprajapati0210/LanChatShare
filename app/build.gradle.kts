@@ -22,6 +22,7 @@ android {
     buildFeatures { compose = true }
 }
 dependencies {
+    implementation(libs.paging.compose)
     implementation(platform(libs.bom))
     implementation(libs.material)
     

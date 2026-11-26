@@ -1,5 +1,7 @@
 # LanChatShare progress
 
+Library now pages sent and received files through indexed Room queries (schema 6), filters by category/direction/contact/date and supports local cleanup. Migration, file sharing and appearance are under Android acceptance testing. The saved source passes the JVM suite and debug lint. Next: verify multi-recipient file deletion, theme persistence and direct-socket TLS on Android, then profile the 100 MB receiver.
+
 Standard and Original media choices are stored in DataStore. Media offers carry a bounded thumbnail when the provider supplies one, and the chat attachment exposes cancel and retry.
 
 Network changes now trigger immediate LAN rediscovery, with a downstream-interface check for hotspot hosts and per-peer reconnect backoff. Network settings explains guest isolation and offers local hotspot creation.

@@ -17,6 +17,7 @@ android {
 }
 ksp { arg("room.schemaLocation", file("schemas").absolutePath) }
 dependencies {
+    api(libs.room.paging)
     implementation(project(":core:data"))
     implementation(libs.media.transformer)
     implementation(libs.media.effect)

@@ -15,12 +15,19 @@ import java.io.InputStream
 import java.security.MessageDigest
 import java.util.UUID
 
-@Entity(tableName = "transfers", primaryKeys = ["peer", "outgoing", "id"])
+@Entity(tableName = "transfers", primaryKeys = ["peer", "outgoing", "id"],
+    indices = [Index("time"),Index("mime"),Index(value = ["peer","time"]),Index(value = ["outgoing","id"])])
 data class Transfer(val peer: String, val outgoing: Boolean, val id: String, val name: String,
     val mime: String, val size: Long, val hash: String, val pin: String, val token: String,
     val state: String, val offset: Long, val time: Long)
 
 @Dao internal interface TransferDao {
+    @RawQuery(observedEntities = [Transfer::class])
+    fun library(query: androidx.sqlite.db.SupportSQLiteQuery): androidx.paging.PagingSource<Int,Transfer>
+    @Query("SELECT COALESCE(SUM(bytes),0) FROM (SELECT MAX(size) AS bytes FROM transfers WHERE (outgoing=1 OR state='done') AND state!='removed' GROUP BY outgoing,id,CASE WHEN outgoing=1 THEN '' ELSE peer END)")
+    fun storedBytes(): Flow<Long>
+    @Query("SELECT COUNT(*) FROM transfers WHERE id=:id AND outgoing=1 AND state!='removed'")
+    suspend fun copies(id: String): Int
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(row: Transfer): Long
     @Query("SELECT * FROM transfers ORDER BY time DESC") fun all(): Flow<List<Transfer>>
     @Query("SELECT * FROM transfers WHERE peer=:peer AND pin=:pin ORDER BY time") fun observe(peer: String, pin: String): Flow<List<Transfer>>
@@ -45,6 +52,23 @@ internal fun fileHash(input: InputStream): String = input.use {
 }
 
 class Transfers internal constructor(private val context: Context, private val db: TrustDatabase) {
+    val storageUsage = db.transfers().storedBytes()
+    fun library(filter: LibraryFilter) = androidx.paging.Pager(androidx.paging.PagingConfig(50, enablePlaceholders = false)) {
+        dao.library(filter.query())
+    }.flow
+    suspend fun removeLocal(row: Transfer): Boolean = withContext(Dispatchers.IO) {
+        db.withTransaction {
+            val current = dao.get(row.peer,row.outgoing,row.id) ?: return@withTransaction false
+            if (current.state !in listOf("done","cancelled","declined","revoked")) return@withTransaction false
+            dao.change(row.peer,row.outgoing,row.id,current.state,"removed")
+            if (!row.outgoing || dao.copies(row.id) == 0) {
+                val payload = file(row)
+                check(!payload.exists() || payload.delete())
+                previewFile(row).delete()
+            }
+            true
+        }
+    }
     private val operations = kotlinx.coroutines.flow.MutableStateFlow(0)
     val activeOperations: kotlinx.coroutines.flow.StateFlow<Int> get() = operations
     internal suspend fun <T> duringTransfer(block: suspend () -> T): T {

@@ -119,6 +119,7 @@ private val destinations = listOf("Chats", "Nearby", "Library", "Settings")
                         "Notifications" -> NotificationSettings()
                         "Diagnostics" -> Diagnostics { detail = "Benchmark" }
                         "Benchmark" -> BenchmarkScreen(trusted,trust.transfers,chat)
+                        "Library" -> LibraryScreen(trust.transfers,trusted)
                         "Media quality" -> QualityPicker()
                         "Settings" -> Column {
                             TextButton(onClick = { detail = "Notifications" }) { Text("Notifications and reachability") }
