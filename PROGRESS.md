@@ -2,6 +2,12 @@
 
 ## Current verification
 
+The full corrected API 37 Android suite passed (15 substantive tests, plus the separately invoked two-device benchmark). The 100 MB range comparison finished with verified receipts and SHA-256 at one, two and four streams. Throughput was 0.388, 0.996 and 1.165 MB/s respectively on virtual Wi-Fi. See [measurements and chat latency](docs/BENCHMARKS.md). The production default remains one stream.
+
+**Next step** is the physical two-phone comparison. Start with Turbo Off on the same router, run the 100 MB and 1 GB Diagnostics benchmarks, then repeat with a direct link and export results. Use the [two-phone checklist](docs/TWO_PHONE_CHECKLIST.md) for screen-off transfer, hotspot rejoin, media codecs and 60/120 Hz motion checks.
+
+## Previous verification
+
 The Android media regression verified that Original retains the source SHA-256 and Standard converts a 1920 × 960 PNG into a 1600 × 800 JPEG. Video encoder interoperability still requires a physical-phone check.
 
 The routed TLS regression reproduced on API 37. Conscrypt tried a raw RSA operation while signing the handshake and Keystore rejected the padding. A separately certified P-256 signing key fixes the platform path, while the original paired identity and CIO credentials continue to work. The targeted Android test passed with wrong-pin rejection and durable resume. The full debug build, JVM tests and lint passed. Next: collect the full corrected Android suite result and the 100 MB range timing comparison.
