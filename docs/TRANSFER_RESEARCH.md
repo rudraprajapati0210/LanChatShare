@@ -1,0 +1,23 @@
+# Local transfer research
+
+Apple describes an AirDrop sender advertising over BLE, followed by discovery and a TLS session over Apple's peer-to-peer Wi-Fi. Removing the access point from the data path saves one radio transmission per packet on a typical single-channel router. Android has no public AWDL API. A direct network can still share a channel with other traffic. Neither a particular frequency nor a throughput improvement is guaranteed. [Apple Platform Security](https://support.apple.com/guide/security/sec2261183f4/web)
+
+Google's Nearby Connections supports offline discovery, authenticated connections and file or stream payloads. The public Nearby implementation negotiates bandwidth upgrades and coordinates switching endpoints. Its implementations include Wi-Fi LAN, hotspot and Direct. The exact medium, parallel stream count, TLS record size and chunk size used by a particular Quick Share release or phone cannot be inferred from the public product documentation. Keep Nearby as a design reference. Adding its SDK would introduce another transport and, on Android, a Play services dependency with usage analytics. [Google's API overview](https://developers.google.com/nearby/connections/overview) · [Bandwidth upgrade implementation](https://github.com/google/nearby/blob/main/connections/implementation/bwu_manager.cc)
+
+## Android medium selection
+
+| Medium or API | Adoption decision and constraints |
+|---|---|
+| WifiP2pManager | First direct-link candidate. Check Wi-Fi Direct support, negotiate the group owner and request 5 GHz where supported. Group negotiation can require system approval. Band choice, 6 GHz support and simultaneous infrastructure Wi-Fi depend on the devices and regulatory domain. [Wi-Fi Direct](https://developer.android.com/develop/connectivity/wifi/wifip2p) |
+| LocalOnlyHotspot and WifiNetworkSpecifier | Second candidate. Hold the host reservation while using its network. The guest requests that specific SSID through Android, observes availability and releases the callback on exit. A single-radio device may temporarily lose its infrastructure network. [Hosting](https://developer.android.com/develop/connectivity/wifi/localonlyhotspot) · [Joining](https://developer.android.com/develop/connectivity/wifi/wifi-bootstrap) |
+| WifiAwareManager | Optional on both ends. Check feature support and runtime availability. Aware requires discovery sessions and a separately requested data path. Availability can change when tethering or P2P starts. [Wi-Fi Aware](https://developer.android.com/develop/connectivity/wifi/wifi-aware) |
+| ConnectivityManager and Network | Bind an unconnected transfer socket to its selected Network before connecting. Keep the existing authenticated LAN path available when hardware allows. Release only the app-owned group, reservation and network requests. Android controls reassociation with the previous AP. [Network.bindSocket](https://developer.android.com/reference/android/net/Network#bindSocket(java.net.Socket)) |
+| WifiManager.WifiLock | Keep the existing foreground transfer and partial CPU lock. Android 14 maps high-performance Wi-Fi requests to low latency, with screen-on and foreground restrictions. Record screen state in measurements. [WifiManager](https://developer.android.com/reference/android/net/wifi/WifiManager#WIFI_MODE_FULL_HIGH_PERF) |
+
+The app supports Android 11 onward. Android 11 requires location permission for BLE discovery. Android 12 separates Bluetooth scan, advertise and connect permissions. For apps targeting Android 13+, nearby Wi-Fi operations require NEARBY_WIFI_DEVICES. Older versions generally require fine location, and P2P discovery can require enabled location services. Permission denial or a cancelled system picker should leave ordinary LAN sharing usable. [Nearby Wi-Fi permissions](https://developer.android.com/develop/connectivity/wifi/wifi-permissions)
+
+## Transport decisions
+
+Bluetooth carries control messages. Negotiate fresh credentials only inside a connection authenticated to the trusted pairing identity. Authenticate every new Wi-Fi connection with the existing identity pins. Keep file bytes on dedicated TLS connections and keep chat receipts on the persistent WebSocket.
+
+Use bounded binary frames and resume at a verified, durable byte offset. Userspace TLS and per-block integrity checks need access to plaintext, so FileChannel.transferTo cannot guarantee an end-to-end zero-copy path. TCP, TLS and the provider negotiate packetization and cryptography. Keep SHA-256 verification at publication and record chat latency alongside throughput before raising the transfer window or enabling parallel streams. Photos, videos and archives can be sent as original bytes without compression.
