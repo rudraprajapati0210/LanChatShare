@@ -72,7 +72,7 @@ private object LocalHotspot {
             }
         }
         Text("Start a direct link from Nearby on two verified phones. Auto accepts a verified phone’s request while Nearby is open.")
-        Text("Join the same router or phone hotspot. If a guest network keeps devices apart, try a phone hotspot.")
+        Text("Some guest networks keep phones apart even when both show Wi-Fi. Open Nearby on both phones to try a direct link, or create a local hotspot below. Queued messages and accepted files resume when the phones reconnect.")
         val network = LocalHotspot.reservation
         if (network == null) {
             Button(enabled = !LocalHotspot.starting, onClick = {

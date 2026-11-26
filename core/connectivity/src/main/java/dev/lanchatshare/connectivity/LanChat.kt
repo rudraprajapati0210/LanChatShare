@@ -85,9 +85,8 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
     suspend fun run(): Unit = withContext(Dispatchers.IO) {
         val local = profile.first()
         val pins = trust.peers.map { rows -> rows.associate { it.id to it.pin } }.distinctUntilChanged()
-        flow {
-            while (currentCoroutineContext().isActive) { emit(lanLinks(context) to System.currentTimeMillis() / TLS_PERIOD); delay(3000) }
-        }.distinctUntilChanged().combine(pins) { route, peers -> route to peers }.combine(TurboLink.route) { state, direct ->
+        networkChanges(context).map { lanLinks(context) to System.currentTimeMillis() / TLS_PERIOD }
+            .distinctUntilChanged().combine(pins) { route, peers -> route to peers }.combine(TurboLink.route) { state, direct ->
             state to direct
         }.collectLatest { (state, direct) ->
             val (route, peers) = state
@@ -112,6 +111,7 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
         val seen = ConcurrentHashMap<String, Seen>()
         val peers = trust.peers.stateIn(this, SharingStarted.Eagerly, emptyList())
         val pending = ConcurrentHashMap.newKeySet<String>()
+        val reconnect = ConcurrentHashMap<String, ReconnectDelay>()
         val challenges = AtomicInteger()
         val manager = context.getSystemService(android.net.ConnectivityManager::class.java)
         val wifi = links.map { it.network }.distinct().singleOrNull().takeIf { direct == null }
@@ -140,7 +140,9 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                     seen[peer.id]?.takeIf { it.until > SystemClock.elapsedRealtime() }?.let { routes.add(0, it.host to it.port) }
                     val selected = direct?.takeIf { it.peer.id == peer.id && it.peer.pin == peer.pin }
                     selected?.let { routes.add(0, it.remote to LAN_PORT) }
-                    if (peer.id !in online.value && routes.isNotEmpty() && pending.add(peer.id)) launch {
+                    val retry = reconnect.getOrPut(peer.id) { ReconnectDelay() }
+                    if (peer.id !in online.value && routes.isNotEmpty() && SystemClock.elapsedRealtime() >= retry.next && pending.add(peer.id)) launch {
+                        var reached = false
                         try {
                             for ((ip, port) in routes.distinct()) {
                                 val link = links.firstOrNull { it.contains(ip) } ?: continue
@@ -158,6 +160,8 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                                                 val token = trust.pendingToken(peer.id)
                                                 authenticateOutgoing(local.id, peer, identityKeys(), token) { supportsFiles = it }
                                                 trust.completeOutgoing(peer.id, token)
+                                                reached = true
+                                                retry.connected()
                                             }
                                             exchange(this, peer, client, "https://$host:$port", supportsFiles, selected, credentials)
                                         }
@@ -171,10 +175,13 @@ class LanChat(private val context: Context, private val trust: TrustStore, profi
                                         else "No reply over Wi-Fi. Open LanChatShare on both phones. If this router isolates devices, try a phone hotspot.") }
                                 }
                             }
-                        } finally { pending.remove(peer.id) }
+                        } finally {
+                            if (!reached) retry.failed(SystemClock.elapsedRealtime())
+                            pending.remove(peer.id)
+                        }
                     }
                 }
-                delay(3500)
+                delay(1000)
             }
         } finally {
             try { server.stop(0, 1000) } finally {

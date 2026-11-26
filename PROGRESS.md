@@ -1,5 +1,7 @@
 # LanChatShare progress
 
+Network changes now trigger immediate LAN rediscovery, with a downstream-interface check for hotspot hosts and per-peer reconnect backoff. Network settings explains guest isolation and offers local hotspot creation.
+
 ## Direct-link implementation
 
 Primary-source research is in docs/TRANSFER_RESEARCH.md and prior measurements are in docs/BENCHMARKS.md. Experimental direct links use transcript-authenticated ECDH, negotiated temporary credentials, a P2P group or local-only hotspot, and socket-scoped routing. Physical acceptance and parallel-stream measurements are open. Existing pins, grant tokens and verified byte offsets remain authoritative.
