@@ -1,5 +1,11 @@
 # LanChatShare progress
 
+## Current verification
+
+The routed TLS regression reproduced on API 37. Conscrypt tried a raw RSA operation while signing the handshake and Keystore rejected the padding. A separately certified P-256 signing key fixes the platform path, while the original paired identity and CIO credentials continue to work. The targeted Android test passed with wrong-pin rejection and durable resume. The full debug build, JVM tests and lint passed. Next: collect the full corrected Android suite result and the 100 MB range timing comparison.
+
+## Earlier checkpoints
+
 The API 37 UI tests passed for onboarding, chat navigation and attachments, notifications, foreground work, appearance persistence, Library controls and Share. Screenshots of Appearance and Share are linked from the README. Motion and high-refresh performance on physical devices are still unverified.
 
 The two-device harness accepts one, two or four concurrent streams. Parallel requests verify each frame and persist only consecutive verified blocks. Single-stream instrumentation reports response-header wait, body time including CRC, CRC time, disk sync and Room progress updates. Production still uses one stream. Next measurement is the same 100 MB file and window at each stream count with concurrent chat.

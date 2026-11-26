@@ -19,7 +19,7 @@ internal fun deviceHost(id: String): String {
     return "$id.lanchatshare.invalid"
 }
 
-internal data class Credentials(val key: PrivateKey, val chain: Array<X509Certificate>)
+internal data class Credentials(val key: PrivateKey, val chain: Array<X509Certificate>, val platform: Credentials? = null)
 
 internal fun certificate(subject: X500Name, issuer: X500Name, public: PublicKey, signer: PrivateKey,
     start: Long, end: Long, host: String?, authority: Boolean): X509Certificate {
