@@ -1,0 +1,19 @@
+name: Feature request
+description: Propose an improvement to local messaging or sharing
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to do?
+      description: Describe the situation on the sending and receiving phones.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected outcome
+      description: What should change, and how would you test it offline?
+    validations:
+      required: true

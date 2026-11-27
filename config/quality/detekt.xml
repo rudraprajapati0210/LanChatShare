@@ -1,0 +1,920 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:ChatWire.kt$row?.pin == peer.pin &amp;&amp; row.state in listOf("active","retrying") &amp;&amp; token != null &amp;&amp; fetch != null &amp;&amp; downloads[row.id]?.isActive != true</ID>
+    <ID>ComplexCondition:LanChat.kt$LanChat$peer.id !in online.value &amp;&amp; routes.isNotEmpty() &amp;&amp; SystemClock.elapsedRealtime() &gt;= retry.next &amp;&amp; pending.add(peer.id)</ID>
+    <ID>ComplexCondition:LanDiscovery.kt$LanDiscovery$active &amp;&amp; id != null &amp;&amp; id != profile.id &amp;&amp; id.length == 36 &amp;&amp; port in 1..65535 &amp;&amp; address != null &amp;&amp; links.any { it.contains(address) }</ID>
+    <ID>ComplexCondition:Pairing.kt$known.toInt() == 1 &amp;&amp; status[0].toInt() == 1 &amp;&amp; ephemeral != null &amp;&amp; hello.upgradeKey != null</ID>
+    <ID>ComplexCondition:TlsBinding.kt$leaf.basicConstraints != -1 || delegation.basicConstraints != 0 || leaf.issuerX500Principal != delegation.subjectX500Principal || delegation.issuerX500Principal != identity.subjectX500Principal</ID>
+    <ID>ComplexCondition:Transfer.kt$Transfers$bounds.outMimeType == "image/jpeg" &amp;&amp; bounds.outWidth in 1..160 &amp;&amp; bounds.outHeight in 1..160 &amp;&amp; bytes.size &lt;= 8192</ID>
+    <ID>ComplexCondition:TransferMeter.kt$TransferMeter$!s.compared &amp;&amp; !row.outgoing &amp;&amp; now-s.start &gt;= 15000 &amp;&amp; row.offset-s.initial &gt;= 8_000_000 &amp;&amp; row.state == "active" &amp;&amp; rate.path in listOf("Wi-Fi Direct","Local hotspot")</ID>
+    <ID>ComplexCondition:TransferWire.kt$start &lt; 0 || end &lt; start || end &gt;= row.size || end - start &gt;= limit</ID>
+    <ID>ComplexCondition:TurboLink.kt$TurboLink$trust.dao.pin(path.peer.id) != path.peer.pin || !active &amp;&amp; (started || android.os.SystemClock.elapsedRealtime() &gt;= expiry)</ID>
+    <ID>CyclomaticComplexMethod:Alerts.kt$internal suspend fun Service.observeTexts(trust: TrustStore)</ID>
+    <ID>CyclomaticComplexMethod:BenchmarkScreen.kt$@Composable internal fun BenchmarkScreen(peers: List&lt;TrustedPeer&gt;, files: Transfers, chat: LanChat)</ID>
+    <ID>CyclomaticComplexMethod:CeilingControls.kt$@Composable internal fun CeilingControls(peer: TrustedPeer?, mb: Int, path: String?, setup: String)</ID>
+    <ID>CyclomaticComplexMethod:ChatScreens.kt$@Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat, appearance: () -&gt; Unit, networkSettings: () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:ChatWire.kt$internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore, profile: Flow&lt;Profile&gt;, supportsFiles: Boolean = true, fetch: (suspend (Transfer, String) -&gt; Unit)? = null)</ID>
+    <ID>CyclomaticComplexMethod:DiagnosticRoute.kt$internal fun ceilingPair(route: ProbeRoute, send: Boolean, mb: Int, sockets: ProbeSockets, controlPort: Int = PORT, listening: (Int) -&gt; Unit = {}, started: () -&gt; Unit = {}, measured: (CeilingRate) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:LanChat.kt$LanChat$private suspend fun exchange(socket: WebSocketSession, peer: TrustedPeer, client: HttpClient, origin: String, supportsFiles: Boolean, direct: TurboRoute?, credentials: Credentials)</ID>
+    <ID>CyclomaticComplexMethod:LanChat.kt$LanChat$private suspend fun network(local: Profile, links: List&lt;LanLink&gt;, tls: SSLContext, credentials: Credentials, direct: TurboRoute?): Unit</ID>
+    <ID>CyclomaticComplexMethod:LibraryScreen.kt$@Composable internal fun LibraryScreen(files: Transfers, peers: List&lt;TrustedPeer&gt;)</ID>
+    <ID>CyclomaticComplexMethod:NearbyRadio.kt$NearbyRadio$private fun runSocket(socket: BluetoothSocket, initiator: Boolean, upgrade: Boolean = false)</ID>
+    <ID>CyclomaticComplexMethod:NearbyScreen.kt$@Composable internal fun NearbyScreen(profile: Profile, trust: TrustStore, openChat: (TrustedPeer) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:Pairing.kt$internal suspend fun pair( frames: Frames, initiator: Boolean, profile: Profile, keys: KeyPair, lookupPin: suspend (String) -&gt; String?, endpoints: List&lt;WifiEndpoint&gt; = emptyList(), certificate: ByteArray? = null, allowUpgrade: Boolean = false, confirm: suspend (Comparison) -&gt; Boolean ): Verified</ID>
+    <ID>CyclomaticComplexMethod:Screens.kt$@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, incoming: IncomingShare?, consumed: () -&gt; Unit, chatTarget: String?, opened: () -&gt; Unit, save: (String, Int?) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:Screens.kt$@Composable fun NameForm(profile: Profile?, busy: Boolean, failed: Boolean, save: (String, Int?) -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:ShareScreen.kt$@Composable internal fun ShareScreen(peers: List&lt;TrustedPeer&gt;, files: Transfers, incoming: IncomingShare?, consumed: () -&gt; Unit, chatPeer: String?)</ID>
+    <ID>CyclomaticComplexMethod:ShareScreen.kt$@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun TransferItem(row: Transfer, files: Transfers, preview: Boolean = false)</ID>
+    <ID>CyclomaticComplexMethod:Theme.kt$@Composable fun LanTheme(peer: String? = null, content: @Composable () -&gt; Unit)</ID>
+    <ID>CyclomaticComplexMethod:TlsBinding.kt$internal fun verifyBinding(chain: Array&lt;X509Certificate&gt;, trusted: Map&lt;String, String&gt;, now: Date = Date()): String</ID>
+    <ID>CyclomaticComplexMethod:Transfer.kt$Transfers$internal suspend fun offer(peer: TrustedPeer, frame: ChatFrame)</ID>
+    <ID>CyclomaticComplexMethod:TransferMeter.kt$TransferMeter$@OptIn(ExperimentalCoroutinesApi::class) suspend fun observe(c: Context, files: Transfers, chat: LanChat)</ID>
+    <ID>CyclomaticComplexMethod:TransferMeter.kt$TransferMeter$fun report(c: Context): String</ID>
+    <ID>CyclomaticComplexMethod:TransferWire.kt$internal fun Route.fileRanges(files: Transfers)</ID>
+    <ID>CyclomaticComplexMethod:TransferWire.kt$internal suspend fun Transfers.receive( row: Transfer, client: HttpClient, origin: String, token: String, preferredWindow: Int = RANGE_BLOCK, streams: Int = 1, timings: RangeTimings? = timings(row), )</ID>
+    <ID>CyclomaticComplexMethod:TransferWire.kt$internal suspend fun WebSocketSession.announceTransfers(peer: TrustedPeer, files: Transfers)</ID>
+    <ID>CyclomaticComplexMethod:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$@Test fun runPair()</ID>
+    <ID>EmptyElseBlock:LibraryScreen.kt$if (e is CancellationException) throw e</ID>
+    <ID>EmptyElseBlock:Transfer.kt$if (n &lt; 0) break</ID>
+    <ID>EmptyFunctionBlock:CeilingControls.kt${}</ID>
+    <ID>EmptyFunctionBlock:LanDiscovery.kt$LanDiscovery.&lt;no name provided&gt;${}</ID>
+    <ID>FunctionNaming:AppearanceScreen.kt$@Composable internal fun AppearanceScreen(peer: String? = null)</ID>
+    <ID>FunctionNaming:BackgroundSettings.kt$@Composable internal fun BatteryHelp()</ID>
+    <ID>FunctionNaming:BackgroundSettings.kt$@Composable internal fun Diagnostics(benchmark: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:BackgroundSettings.kt$@Composable internal fun FirstTransferBatteryHelp(files: dev.lanchatshare.connectivity.Transfers)</ID>
+    <ID>FunctionNaming:BackgroundSettings.kt$@Composable internal fun NotificationAccess()</ID>
+    <ID>FunctionNaming:BackgroundSettings.kt$@Composable internal fun NotificationSettings()</ID>
+    <ID>FunctionNaming:BackgroundSettings.kt$@Composable private fun Choice(label: String, on: Boolean, change: (Boolean) -&gt; Unit)</ID>
+    <ID>FunctionNaming:BenchmarkScreen.kt$@Composable internal fun BenchmarkScreen(peers: List&lt;TrustedPeer&gt;, files: Transfers, chat: LanChat)</ID>
+    <ID>FunctionNaming:CeilingControls.kt$@Composable @Suppress("UNUSED_PARAMETER") internal fun CeilingControls(peer: TrustedPeer?, mb: Int, path: String?, setup: String)</ID>
+    <ID>FunctionNaming:CeilingControls.kt$@Composable internal fun CeilingControls(peer: TrustedPeer?, mb: Int, path: String?, setup: String)</ID>
+    <ID>FunctionNaming:ChatScreens.kt$@Composable internal fun ChatAccess()</ID>
+    <ID>FunctionNaming:ChatScreens.kt$@Composable internal fun ChatList(peers: List&lt;TrustedPeer&gt;, trust: TrustStore, chat: LanChat, open: (TrustedPeer) -&gt; Unit, nearby: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:ChatScreens.kt$@Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat, appearance: () -&gt; Unit, networkSettings: () -&gt; Unit)</ID>
+    <ID>FunctionNaming:ChatScreens.kt$@Composable private fun ContactMark(peer: TrustedPeer)</ID>
+    <ID>FunctionNaming:LibraryScreen.kt$@Composable internal fun LibraryScreen(files: Transfers, peers: List&lt;TrustedPeer&gt;)</ID>
+    <ID>FunctionNaming:LibraryScreen.kt$@Composable private fun Choice(value: String, values: List&lt;String&gt;, select: (String) -&gt; Unit)</ID>
+    <ID>FunctionNaming:LibraryScreen.kt$@Composable private fun FilePreview(files: Transfers,row: Transfer,height: Int)</ID>
+    <ID>FunctionNaming:NearbyScreen.kt$@Composable internal fun NearbyScreen(profile: Profile, trust: TrustStore, openChat: (TrustedPeer) -&gt; Unit)</ID>
+    <ID>FunctionNaming:NetworkSettings.kt$@Composable internal fun NetworkSettings(chat: LanChat)</ID>
+    <ID>FunctionNaming:Screens.kt$@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, incoming: IncomingShare?, consumed: () -&gt; Unit, chatTarget: String?, opened: () -&gt; Unit, save: (String, Int?) -&gt; Unit)</ID>
+    <ID>FunctionNaming:Screens.kt$@Composable fun NameForm(profile: Profile?, busy: Boolean, failed: Boolean, save: (String, Int?) -&gt; Unit)</ID>
+    <ID>FunctionNaming:Screens.kt$@Composable private fun Destinations(item: @Composable (String, @Composable () -&gt; Unit, @Composable () -&gt; Unit) -&gt; Unit)</ID>
+    <ID>FunctionNaming:Screens.kt$@Composable private fun Wordmark()</ID>
+    <ID>FunctionNaming:ShareScreen.kt$@Composable internal fun QualityPicker()</ID>
+    <ID>FunctionNaming:ShareScreen.kt$@Composable internal fun ShareScreen(peers: List&lt;TrustedPeer&gt;, files: Transfers, incoming: IncomingShare?, consumed: () -&gt; Unit, chatPeer: String?)</ID>
+    <ID>FunctionNaming:ShareScreen.kt$@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun TransferItem(row: Transfer, files: Transfers, preview: Boolean = false)</ID>
+    <ID>FunctionNaming:Theme.kt$@Composable fun LanTheme(peer: String? = null, content: @Composable () -&gt; Unit)</ID>
+    <ID>FunctionOnlyReturningConstant:DiagnosticRoute.kt$@Suppress("UNUSED_PARAMETER") internal fun diagnosticRoute(files: Transfers, peer: TrustedPeer, credentials: Credentials, remote: InetAddress, local: InetAddress, network: Network?): Closeable?</ID>
+    <ID>InstanceOfCheckForException:LibraryScreen.kt$e is CancellationException</ID>
+    <ID>InstanceOfCheckForException:NearbyRadio.kt$NearbyRadio$e is SecurityException</ID>
+    <ID>LongMethod:BenchmarkScreen.kt$@Composable internal fun BenchmarkScreen(peers: List&lt;TrustedPeer&gt;, files: Transfers, chat: LanChat)</ID>
+    <ID>LongMethod:ChatScreens.kt$@Composable internal fun Conversation(peer: TrustedPeer, trust: TrustStore, chat: LanChat, appearance: () -&gt; Unit, networkSettings: () -&gt; Unit)</ID>
+    <ID>LongMethod:ChatTransportTest.kt$ChatTransportTest$@Test fun pinnedTlsDeliversQueuedMessageAndReply()</ID>
+    <ID>LongMethod:ChatUiTest.kt$ChatUiTest$@Test fun trustedPeerOpensFromBothTabsAndQueuedTextSurvivesRecreation()</ID>
+    <ID>LongMethod:ChatWire.kt$internal suspend fun WebSocketSession.chat(peer: TrustedPeer, trust: TrustStore, profile: Flow&lt;Profile&gt;, supportsFiles: Boolean = true, fetch: (suspend (Transfer, String) -&gt; Unit)? = null)</ID>
+    <ID>LongMethod:DiagnosticRoute.kt$internal fun ceilingPair(route: ProbeRoute, send: Boolean, mb: Int, sockets: ProbeSockets, controlPort: Int = PORT, listening: (Int) -&gt; Unit = {}, started: () -&gt; Unit = {}, measured: (CeilingRate) -&gt; Unit)</ID>
+    <ID>LongMethod:LanChat.kt$LanChat$private suspend fun network(local: Profile, links: List&lt;LanLink&gt;, tls: SSLContext, credentials: Credentials, direct: TurboRoute?): Unit</ID>
+    <ID>LongMethod:LibraryScreen.kt$@Composable internal fun LibraryScreen(files: Transfers, peers: List&lt;TrustedPeer&gt;)</ID>
+    <ID>LongMethod:NearbyScreen.kt$@Composable internal fun NearbyScreen(profile: Profile, trust: TrustStore, openChat: (TrustedPeer) -&gt; Unit)</ID>
+    <ID>LongMethod:Screens.kt$@Composable fun Home(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, incoming: IncomingShare?, consumed: () -&gt; Unit, chatTarget: String?, opened: () -&gt; Unit, save: (String, Int?) -&gt; Unit)</ID>
+    <ID>LongMethod:ShareScreen.kt$@Composable internal fun ShareScreen(peers: List&lt;TrustedPeer&gt;, files: Transfers, incoming: IncomingShare?, consumed: () -&gt; Unit, chatPeer: String?)</ID>
+    <ID>LongMethod:ShareScreen.kt$@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun TransferItem(row: Transfer, files: Transfers, preview: Boolean = false)</ID>
+    <ID>LongMethod:TransferMeter.kt$TransferMeter$@OptIn(ExperimentalCoroutinesApi::class) suspend fun observe(c: Context, files: Transfers, chat: LanChat)</ID>
+    <ID>LongMethod:TransferWire.kt$internal suspend fun Transfers.receive( row: Transfer, client: HttpClient, origin: String, token: String, preferredWindow: Int = RANGE_BLOCK, streams: Int = 1, timings: RangeTimings? = timings(row), )</ID>
+    <ID>LongMethod:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$@Test fun runPair()</ID>
+    <ID>LongParameterList:DeviceTls.kt$(id: String, identity: PrivateKey, root: X509Certificate, store: KeyStore, prefix: String, now: Long)</ID>
+    <ID>LongParameterList:DiagnosticRoute.kt$(files: Transfers, peer: TrustedPeer, credentials: Credentials, remote: InetAddress, local: InetAddress, network: Network?)</ID>
+    <ID>LongParameterList:DiagnosticRoute.kt$(route: ProbeRoute, send: Boolean, mb: Int, sockets: ProbeSockets, controlPort: Int = PORT, listening: (Int) -&gt; Unit = {}, started: () -&gt; Unit = {}, measured: (CeilingRate) -&gt; Unit)</ID>
+    <ID>LongParameterList:LanChat.kt$LanChat$(socket: WebSocketSession, peer: TrustedPeer, client: HttpClient, origin: String, supportsFiles: Boolean, direct: TurboRoute?, credentials: Credentials)</ID>
+    <ID>LongParameterList:Pairing.kt$( frames: Frames, initiator: Boolean, profile: Profile, keys: KeyPair, lookupPin: suspend (String) -&gt; String?, endpoints: List&lt;WifiEndpoint&gt; = emptyList(), certificate: ByteArray? = null, allowUpgrade: Boolean = false, confirm: suspend (Comparison) -&gt; Boolean )</ID>
+    <ID>LongParameterList:Screens.kt$(profile: Profile, busy: Boolean, failed: Boolean, trust: dev.lanchatshare.connectivity.TrustStore, chat: dev.lanchatshare.connectivity.LanChat, incoming: IncomingShare?, consumed: () -&gt; Unit, chatTarget: String?, opened: () -&gt; Unit, save: (String, Int?) -&gt; Unit)</ID>
+    <ID>LongParameterList:TlsBinding.kt$(id: String, identity: PrivateKey, root: X509Certificate, issuer: KeyPair, transport: KeyPair, now: Long)</ID>
+    <ID>LongParameterList:TlsBinding.kt$(subject: X500Name, issuer: X500Name, public: PublicKey, signer: PrivateKey, start: Long, end: Long, host: String?, authority: Boolean)</ID>
+    <ID>LongParameterList:TransferWire.kt$( row: Transfer, client: HttpClient, origin: String, token: String, preferredWindow: Int = RANGE_BLOCK, streams: Int = 1, timings: RangeTimings? = timings(row), )</ID>
+    <ID>LongParameterList:TransferWire.kt$(client: HttpClient, origin: String, id: String, token: String, start: Long, count: Int, size: Long)</ID>
+    <ID>LoopWithTooManyJumpStatements:LanChat.kt$LanChat$for</ID>
+    <ID>LoopWithTooManyJumpStatements:TransferMeter.kt$TransferMeter$for</ID>
+    <ID>MagicNumber:Alerts.kt$0xff195950</ID>
+    <ID>MagicNumber:Alerts.kt$0xff495b82</ID>
+    <ID>MagicNumber:Alerts.kt$0xff75495b</ID>
+    <ID>MagicNumber:Alerts.kt$0xff864728</ID>
+    <ID>MagicNumber:Alerts.kt$22</ID>
+    <ID>MagicNumber:Alerts.kt$3</ID>
+    <ID>MagicNumber:Alerts.kt$31</ID>
+    <ID>MagicNumber:Alerts.kt$32f</ID>
+    <ID>MagicNumber:Alerts.kt$33</ID>
+    <ID>MagicNumber:Alerts.kt$42</ID>
+    <ID>MagicNumber:Alerts.kt$64</ID>
+    <ID>MagicNumber:Alerts.kt$7</ID>
+    <ID>MagicNumber:Alerts.kt$8</ID>
+    <ID>MagicNumber:Alerts.kt$MessageAction$4096</ID>
+    <ID>MagicNumber:Appearance.kt$0xff006457</ID>
+    <ID>MagicNumber:Appearance.kt$0xff344e79</ID>
+    <ID>MagicNumber:Appearance.kt$0xff48494a</ID>
+    <ID>MagicNumber:Appearance.kt$0xff4b602c</ID>
+    <ID>MagicNumber:Appearance.kt$0xff73405c</ID>
+    <ID>MagicNumber:Appearance.kt$0xff8a402a</ID>
+    <ID>MagicNumber:Appearance.kt$0xff92dfcb</ID>
+    <ID>MagicNumber:Appearance.kt$0xffb5caed</ID>
+    <ID>MagicNumber:Appearance.kt$0xffc2d893</ID>
+    <ID>MagicNumber:Appearance.kt$0xffcfebe0</ID>
+    <ID>MagicNumber:Appearance.kt$0xffd4d3cb</ID>
+    <ID>MagicNumber:Appearance.kt$0xffdfe6f3</ID>
+    <ID>MagicNumber:Appearance.kt$0xffe1e9ca</ID>
+    <ID>MagicNumber:Appearance.kt$0xffe6b7cf</ID>
+    <ID>MagicNumber:Appearance.kt$0xffe6e5dc</ID>
+    <ID>MagicNumber:Appearance.kt$0xfff2b59c</ID>
+    <ID>MagicNumber:Appearance.kt$0xfff2dbe8</ID>
+    <ID>MagicNumber:Appearance.kt$0xfff5d9ca</ID>
+    <ID>MagicNumber:AppearanceScreen.kt$31</ID>
+    <ID>MagicNumber:BackgroundSettings.kt$24</ID>
+    <ID>MagicNumber:BackgroundSettings.kt$31</ID>
+    <ID>MagicNumber:BackgroundSettings.kt$33</ID>
+    <ID>MagicNumber:BenchmarkScreen.kt$10</ID>
+    <ID>MagicNumber:BenchmarkScreen.kt$100</ID>
+    <ID>MagicNumber:BenchmarkScreen.kt$1000</ID>
+    <ID>MagicNumber:BenchmarkScreen.kt$2400</ID>
+    <ID>MagicNumber:BenchmarkScreen.kt$2500</ID>
+    <ID>MagicNumber:CeilingControls.kt$1e6</ID>
+    <ID>MagicNumber:CeilingControls.kt$8</ID>
+    <ID>MagicNumber:ChatScreens.kt$.80f</ID>
+    <ID>MagicNumber:ChatScreens.kt$2500</ID>
+    <ID>MagicNumber:ChatScreens.kt$37</ID>
+    <ID>MagicNumber:ChatScreens.kt$4</ID>
+    <ID>MagicNumber:ChatService.kt$ChatService$31</ID>
+    <ID>MagicNumber:ChatService.kt$ChatService$43</ID>
+    <ID>MagicNumber:ChatWire.kt$20000</ID>
+    <ID>MagicNumber:ChatWire.kt$3</ID>
+    <ID>MagicNumber:ChatWire.kt$32</ID>
+    <ID>MagicNumber:ChatWire.kt$32768</ID>
+    <ID>MagicNumber:ChatWire.kt$4096</ID>
+    <ID>MagicNumber:ChatWire.kt$900</ID>
+    <ID>MagicNumber:DeviceTls.kt$2048</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$10</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$100</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$1000</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$120_000L</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$147</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$15_000</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$16_000L</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$1_000_000L</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$30_000</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$32</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$5000</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$60_000</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$65</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$8000</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$CeilingRate$1000.0</ID>
+    <ID>MagicNumber:DiagnosticRoute.kt$ProbeSockets$1_000_000_000</ID>
+    <ID>MagicNumber:LanChat.kt$10000</ID>
+    <ID>MagicNumber:LanChat.kt$32768</ID>
+    <ID>MagicNumber:LanChat.kt$4500</ID>
+    <ID>MagicNumber:LanChat.kt$LanChat$1000</ID>
+    <ID>MagicNumber:LanChat.kt$LanChat$10000</ID>
+    <ID>MagicNumber:LanChat.kt$LanChat$12</ID>
+    <ID>MagicNumber:LanChat.kt$LanChat$45000</ID>
+    <ID>MagicNumber:LanChat.kt$LanChat$5000</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanDiscovery$36</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanDiscovery$5</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanDiscovery$5000</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanDiscovery$64</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanDiscovery$65535</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanDiscovery$900</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanLink$0xff</ID>
+    <ID>MagicNumber:LanDiscovery.kt$LanLink$8</ID>
+    <ID>MagicNumber:LibraryScreen.kt$.28f</ID>
+    <ID>MagicNumber:LibraryScreen.kt$.62f</ID>
+    <ID>MagicNumber:LibraryScreen.kt$104</ID>
+    <ID>MagicNumber:LibraryScreen.kt$108</ID>
+    <ID>MagicNumber:LibraryScreen.kt$176</ID>
+    <ID>MagicNumber:LibraryScreen.kt$192</ID>
+    <ID>MagicNumber:LibraryScreen.kt$30</ID>
+    <ID>MagicNumber:LibraryScreen.kt$511</ID>
+    <ID>MagicNumber:LibraryScreen.kt$512</ID>
+    <ID>MagicNumber:LibraryScreen.kt$7</ID>
+    <ID>MagicNumber:LibraryScreen.kt$8</ID>
+    <ID>MagicNumber:LibraryScreen.kt$86400000L</ID>
+    <ID>MagicNumber:MediaQuality.kt$1280</ID>
+    <ID>MagicNumber:MediaQuality.kt$1600</ID>
+    <ID>MagicNumber:MediaQuality.kt$1600L</ID>
+    <ID>MagicNumber:MediaQuality.kt$50</ID>
+    <ID>MagicNumber:MediaQuality.kt$720</ID>
+    <ID>MagicNumber:MediaQuality.kt$8192</ID>
+    <ID>MagicNumber:MediaQuality.kt$82</ID>
+    <ID>MagicNumber:MediaQuality.kt$96</ID>
+    <ID>MagicNumber:NearbyRadio.kt$16</ID>
+    <ID>MagicNumber:NearbyRadio.kt$4</ID>
+    <ID>MagicNumber:NearbyRadio.kt$8</ID>
+    <ID>MagicNumber:NearbyRadio.kt$9</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio$30000</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio$4</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio$5000</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio$90000</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio.&lt;no name provided&gt;$128</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio.&lt;no name provided&gt;$13</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio.&lt;no name provided&gt;$255</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio.&lt;no name provided&gt;$3</ID>
+    <ID>MagicNumber:NearbyRadio.kt$NearbyRadio.&lt;no name provided&gt;$4</ID>
+    <ID>MagicNumber:NearbyScreen.kt$3</ID>
+    <ID>MagicNumber:NearbyScreen.kt$31</ID>
+    <ID>MagicNumber:NearbyScreen.kt$33</ID>
+    <ID>MagicNumber:NetworkChanges.kt$3000</ID>
+    <ID>MagicNumber:NetworkChanges.kt$ReconnectDelay$1000L</ID>
+    <ID>MagicNumber:NetworkChanges.kt$ReconnectDelay$5</ID>
+    <ID>MagicNumber:NetworkSettings.kt$33</ID>
+    <ID>MagicNumber:Pairing.kt$0xffffffffL</ID>
+    <ID>MagicNumber:Pairing.kt$1_000_000</ID>
+    <ID>MagicNumber:Pairing.kt$3</ID>
+    <ID>MagicNumber:Pairing.kt$32</ID>
+    <ID>MagicNumber:Pairing.kt$6</ID>
+    <ID>MagicNumber:Pairing.kt$8</ID>
+    <ID>MagicNumber:Pairing.kt$Frames$4096</ID>
+    <ID>MagicNumber:ProfileRepository.kt$24</ID>
+    <ID>MagicNumber:ProfileRepository.kt$ProfileRepository$4</ID>
+    <ID>MagicNumber:RangeTimings.kt$RangeTimings$1_000_000</ID>
+    <ID>MagicNumber:RoutedClient.kt$10</ID>
+    <ID>MagicNumber:RoutedClient.kt$32768</ID>
+    <ID>MagicNumber:RoutedClient.kt$5</ID>
+    <ID>MagicNumber:RoutedClient.kt$&lt;no name provided&gt;$1024</ID>
+    <ID>MagicNumber:RoutedClient.kt$&lt;no name provided&gt;$512</ID>
+    <ID>MagicNumber:Screens.kt$0xff006457</ID>
+    <ID>MagicNumber:Screens.kt$0xff415883</ID>
+    <ID>MagicNumber:Screens.kt$0xff64466b</ID>
+    <ID>MagicNumber:Screens.kt$0xff813f32</ID>
+    <ID>MagicNumber:Screens.kt$120</ID>
+    <ID>MagicNumber:Screens.kt$160</ID>
+    <ID>MagicNumber:ShareScreen.kt$639</ID>
+    <ID>MagicNumber:ShareScreen.kt$640</ID>
+    <ID>MagicNumber:Theme.kt$0xff00392f</ID>
+    <ID>MagicNumber:Theme.kt$0xff006457</ID>
+    <ID>MagicNumber:Theme.kt$0xff101d1b</ID>
+    <ID>MagicNumber:Theme.kt$0xff152a29</ID>
+    <ID>MagicNumber:Theme.kt$0xff182321</ID>
+    <ID>MagicNumber:Theme.kt$0xff243632</ID>
+    <ID>MagicNumber:Theme.kt$0xff284c42</ID>
+    <ID>MagicNumber:Theme.kt$0xff475e59</ID>
+    <ID>MagicNumber:Theme.kt$0xff92dfcb</ID>
+    <ID>MagicNumber:Theme.kt$0xffa5302c</ID>
+    <ID>MagicNumber:Theme.kt$0xffb7cac2</ID>
+    <ID>MagicNumber:Theme.kt$0xffcfebe0</ID>
+    <ID>MagicNumber:Theme.kt$0xffeaece4</ID>
+    <ID>MagicNumber:Theme.kt$0xffedf4eb</ID>
+    <ID>MagicNumber:Theme.kt$0xfffaf9f1</ID>
+    <ID>MagicNumber:Theme.kt$0xffffb4ab</ID>
+    <ID>MagicNumber:Theme.kt$12</ID>
+    <ID>MagicNumber:Theme.kt$14</ID>
+    <ID>MagicNumber:Theme.kt$16</ID>
+    <ID>MagicNumber:Theme.kt$17</ID>
+    <ID>MagicNumber:Theme.kt$180</ID>
+    <ID>MagicNumber:Theme.kt$20</ID>
+    <ID>MagicNumber:Theme.kt$24</ID>
+    <ID>MagicNumber:Theme.kt$31</ID>
+    <ID>MagicNumber:Theme.kt$32</ID>
+    <ID>MagicNumber:Theme.kt$36</ID>
+    <ID>MagicNumber:Theme.kt$400</ID>
+    <ID>MagicNumber:Theme.kt$42</ID>
+    <ID>MagicNumber:Theme.kt$500</ID>
+    <ID>MagicNumber:Theme.kt$600</ID>
+    <ID>MagicNumber:Theme.kt$650</ID>
+    <ID>MagicNumber:TlsBinding.kt$128</ID>
+    <ID>MagicNumber:TlsBinding.kt$3</ID>
+    <ID>MagicNumber:Transfer.kt$65536</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$10</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$100</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$1000</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$10924</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$127</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$147</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$16</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$160</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$200</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$50</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$65536</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers$8192</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers.&lt;no name provided&gt;$0.75f</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers.&lt;no name provided&gt;$1_000_000L</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers.&lt;no name provided&gt;$255</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers.&lt;no name provided&gt;$32</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers.&lt;no name provided&gt;$64</ID>
+    <ID>MagicNumber:Transfer.kt$Transfers.&lt;no name provided&gt;$65535</ID>
+    <ID>MagicNumber:TransferDecision.kt$33</ID>
+    <ID>MagicNumber:TransferDecision.kt$TransferDecision$3</ID>
+    <ID>MagicNumber:TransferDecision.kt$TransferDecision$4</ID>
+    <ID>MagicNumber:TransferMeter.kt$126</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$0.9</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$0.95</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$100</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$1000</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$1000.0</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$15000</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$1_000_000</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$1e6</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$32</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$750</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$7_200_000L</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$8</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$8000</ID>
+    <ID>MagicNumber:TransferMeter.kt$TransferMeter$8_000_000</ID>
+    <ID>MagicNumber:TransferPower.kt$250</ID>
+    <ID>MagicNumber:TransferPower.kt$34</ID>
+    <ID>MagicNumber:TransferPower.kt$40_000</ID>
+    <ID>MagicNumber:TransferPower.kt$60_000</ID>
+    <ID>MagicNumber:TransferProgress.kt$100</ID>
+    <ID>MagicNumber:TransferProgress.kt$1000.0</ID>
+    <ID>MagicNumber:TransferProgress.kt$1e6</ID>
+    <ID>MagicNumber:TransferProgress.kt$43</ID>
+    <ID>MagicNumber:TransferProgress.kt$750</ID>
+    <ID>MagicNumber:TransferWire.kt$4</ID>
+    <ID>MagicNumber:TransferWire.kt$4L</ID>
+    <ID>MagicNumber:TransferWire.kt$8192</ID>
+    <ID>MagicNumber:TransferWorker.kt$TransferWorker.Companion$1000</ID>
+    <ID>MagicNumber:TransferWorker.kt$TransferWorker.Companion$10L</ID>
+    <ID>MagicNumber:TransferWorker.kt$TransferWorker.Companion$60</ID>
+    <ID>MagicNumber:Trust.kt$TrustStore$120_000</ID>
+    <ID>MagicNumber:Trust.kt$TrustStore$4096</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$1.05</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$1000</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$12000</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$120000</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$126</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$250</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$255</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$45000</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$47000</ID>
+    <ID>MagicNumber:TurboLink.kt$TurboLink$8</ID>
+    <ID>MagicNumber:UpgradeChannel.kt$UpgradeChannel$12</ID>
+    <ID>MagicNumber:UpgradeChannel.kt$UpgradeChannel$128</ID>
+    <ID>MagicNumber:WifiEndpoint.kt$8</ID>
+    <ID>MagicNumber:WifiEndpoint.kt$WifiEndpoint$16</ID>
+    <ID>MagicNumber:WifiEndpoint.kt$WifiEndpoint$223</ID>
+    <ID>MagicNumber:WifiEndpoint.kt$WifiEndpoint$255</ID>
+    <ID>MagicNumber:WifiEndpoint.kt$WifiEndpoint$4</ID>
+    <ID>MagicNumber:WifiEndpoint.kt$WifiEndpoint$65535</ID>
+    <ID>MagicNumber:WindowedRanges.kt$16</ID>
+    <ID>MagicNumber:WindowedRanges.kt$1_000_000</ID>
+    <ID>MagicNumber:WindowedRanges.kt$24</ID>
+    <ID>MagicNumber:WindowedRanges.kt$255</ID>
+    <ID>MagicNumber:WindowedRanges.kt$4</ID>
+    <ID>MagicNumber:WindowedRanges.kt$4L</ID>
+    <ID>MagicNumber:WindowedRanges.kt$8</ID>
+    <ID>MatchingDeclarationName:ChatWire.kt$ChatFrame</ID>
+    <ID>MaxLineLength:Alerts.kt$.</ID>
+    <ID>MaxLineLength:Alerts.kt$MessageAction$val text = RemoteInput.getResultsFromIntent(intent)?.getCharSequence("text")?.toString()?.trim().orEmpty()</ID>
+    <ID>MaxLineLength:Alerts.kt$if (options.muted(LocalTime.now().hour)) builder.setGroup("quiet-messages").setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)</ID>
+    <ID>MaxLineLength:Alerts.kt$internal fun Context.mayNotify()</ID>
+    <ID>MaxLineLength:Alerts.kt$internal suspend fun Context.flag(key: String, value: Boolean)</ID>
+    <ID>MaxLineLength:Alerts.kt$messages.takeLast(8).forEach { style.addMessage(if (options.preview) it.text else "New message",it.time,person) }</ID>
+    <ID>MaxLineLength:AndroidIdentityTest.kt$AndroidIdentityTest$db.execSQL("CREATE TABLE trusted_peers (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, colour INTEGER NOT NULL, pin TEXT NOT NULL)")</ID>
+    <ID>MaxLineLength:Appearance.kt$Appearance</ID>
+    <ID>MaxLineLength:Appearance.kt$Appearance(value("mode","System"),value("palette","Estuary"),value("wallpaper","Plain"),p[booleanPreferencesKey("reduced")] ?: false)</ID>
+    <ID>MaxLineLength:Appearance.kt$fun value(key: String, fallback: String)</ID>
+    <ID>MaxLineLength:AppearanceScreen.kt$Column</ID>
+    <ID>MaxLineLength:AppearanceScreen.kt$Surface</ID>
+    <ID>MaxLineLength:AppearanceScreen.kt$if (Build.VERSION.SDK_INT &gt;= 31) FilterChip(appearance.palette == "Dynamic",{set("palette","Dynamic")},{Text("Device colours")})</ID>
+    <ID>MaxLineLength:AppearanceScreen.kt$listOf("Plain","Tint","Dotted").forEach { paper -&gt; FilterChip(appearance.wallpaper == paper,{set("wallpaper",paper)},{Text(paper)}) }</ID>
+    <ID>MaxLineLength:AppearanceScreen.kt$listOf("System","Light","Dark","AMOLED").forEach { mode -&gt; FilterChip(appearance.mode == mode,{set("mode",mode)},{Text(mode)}) }</ID>
+    <ID>MaxLineLength:AppearanceScreen.kt$}</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$"Allow Nearby devices to check Bluetooth."</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$.</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$Column</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$Text("Keep listening on the LAN when you leave the app. If Android stops the service, queued messages arrive after reconnection.")</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$Text(if (c.applicationContext.getSystemService(WifiManager::class.java).isWifiEnabled) "Wi-Fi is on." else "Wi-Fi is off. A phone hotspot can also carry transfers.")</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$Text(if (c.getSystemService(NotificationManager::class.java).areNotificationsEnabled()) "Notifications are allowed." else "Android is blocking notifications.")</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$Text(if (exempt) "Battery optimization is disabled for this app." else "Android may defer background network access during deep sleep.")</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$android.app.AlertDialog.Builder(c).setTitle("Quiet hours " + key)</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$androidx.compose.material3</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$c.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.fromParts("package",c.packageName,null)))</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$if (opts.batterySeen || c.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(c.packageName)) return</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$text={Column { Text("Some phones put local connections to sleep. If transfers pause while locked, allow background battery use for LanChatShare."); BatteryHelp() }}</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$val</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$val active by remember(files) { files.activeOperations.map { it &gt; 0 }.distinctUntilChanged() }.collectAsStateWithLifecycle(false)</ID>
+    <ID>MaxLineLength:BackgroundSettings.kt$}</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$"VALUES(?,0,?,'sample','application/octet-stream',8388608,'','','','retrying',1048576,1)"</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$Log</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$android.app.RemoteInput.addResultsToIntent(reply.remoteInputs,response,android.os.Bundle().apply { putCharSequence("text","From notification") })</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$assertTrue(notice.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.startsWith("Reconnecting") == true)</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$db</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$db.execSQL("INSERT INTO trusted_peers(id,name,colour,pin) VALUES(?,?,0,'local-test')", arrayOf(peer,"Test phone"))</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$runBlocking { withTimeout(5000) { trust.conversation(peer).first { rows -&gt; rows.any { it.outgoing &amp;&amp; it.text == "From notification" } } } }</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$runBlocking { withTimeout(5000) { while (manager.activeNotifications.any { it.tag == peer }) delay(100) } }</ID>
+    <ID>MaxLineLength:BackgroundTest.kt$BackgroundTest$while (ChatService.running.value || manager.activeNotifications.any { it.tag == "$peer/$id/false" }) delay(100)</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$Column</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$Text("%.2f MB/s · %.1f Mbit/s".format(java.util.Locale.US,it.getDouble("averageMBps"),it.getDouble("averageMbitPerSec")))</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$Text("For screen-off measurements, lock the phone after accepting. Android can reduce Wi-Fi performance while locked.")</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$Text(listOfNotNull(info.frequency?.let { "$it MHz" }, info.mbps?.let { "$it Mbps" }, info.rssi?.let { "$it dBm" }).joinToString(" · ").ifEmpty { "Radio details unavailable" })</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$TextButton(onClick={context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("LAN benchmark",report));message="Copied results"}) {Text("Copy results")}</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$catch(e: CancellationException){throw e}</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$if (it.has("percentOfTCP")) Text("%.1f%% of measured TCP capacity".format(java.util.Locale.US,it.getDouble("percentOfTCP")))</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$listOf(10,100,1000).forEach { size -&gt; FilterChip(size==mb,{mb=size},{ Text(if(size==1000)"1 GB" else "$size MB") }) }</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$message="Results exported"</ID>
+    <ID>MaxLineLength:BenchmarkScreen.kt$try</ID>
+    <ID>MaxLineLength:CeilingControls.kt$.</ID>
+    <ID>MaxLineLength:CeilingControls.kt$Text("Choose the same size on both phones. Tap Send here on the sender, then Receive here on the receiver. Each phone measures TCP and pinned TLS using generated bytes.")</ID>
+    <ID>MaxLineLength:CeilingControls.kt$catch (e: Exception) { status = "Measurement stopped. " + (e.message ?: "Check the connection and the selected phone.") }</ID>
+    <ID>MaxLineLength:ChatMessage.kt$ChatMessage$val text: String</ID>
+    <ID>MaxLineLength:ChatMessage.kt$MessageDao$@Query("SELECT * FROM messages WHERE peerId = :peer AND outgoing = 1 AND delivered = 0 AND attachment = 0 ORDER BY time, rowid LIMIT 8")</ID>
+    <ID>MaxLineLength:ChatMessage.kt$MessageDao$@Query("SELECT * FROM messages m WHERE rowid = (SELECT rowid FROM messages WHERE peerId = m.peerId ORDER BY time DESC, rowid DESC LIMIT 1) ORDER BY time DESC")</ID>
+    <ID>MaxLineLength:ChatMessage.kt$MessageDao$@Query("SELECT m.rowid AS sequence, m.peerId, p.name, p.colour, m.text, m.time FROM messages m JOIN trusted_peers p ON p.id=m.peerId WHERE m.unread=1 ORDER BY m.rowid")</ID>
+    <ID>MaxLineLength:ChatMessage.kt$MessageDao$@Query("UPDATE messages SET delivered = 1 WHERE peerId = :peer AND id = :id AND outgoing = 1 AND attachment = :attachment")</ID>
+    <ID>MaxLineLength:ChatMessage.kt$UnreadText</ID>
+    <ID>MaxLineLength:ChatScreens.kt$@Composable internal</ID>
+    <ID>MaxLineLength:ChatScreens.kt$Box</ID>
+    <ID>MaxLineLength:ChatScreens.kt$Column</ID>
+    <ID>MaxLineLength:ChatScreens.kt$OutlinedTextField</ID>
+    <ID>MaxLineLength:ChatScreens.kt$Row</ID>
+    <ID>MaxLineLength:ChatScreens.kt$Surface</ID>
+    <ID>MaxLineLength:ChatScreens.kt$Text</ID>
+    <ID>MaxLineLength:ChatScreens.kt$Text(peer.name.take(Character.charCount(peer.name.codePointAt(0))),color = MaterialTheme.colorScheme.onSecondaryContainer)</ID>
+    <ID>MaxLineLength:ChatScreens.kt$color</ID>
+    <ID>MaxLineLength:ChatScreens.kt$else</ID>
+    <ID>MaxLineLength:ChatScreens.kt$fun allowed()</ID>
+    <ID>MaxLineLength:ChatScreens.kt$if</ID>
+    <ID>MaxLineLength:ChatScreens.kt$if (message.outgoing &amp;&amp; !message.attachment) Text(if (message.delivered) "Delivered" else "Queued", style = MaterialTheme.typography.labelSmall)</ID>
+    <ID>MaxLineLength:ChatScreens.kt$photos.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))</ID>
+    <ID>MaxLineLength:ChatScreens.kt$supportingContent</ID>
+    <ID>MaxLineLength:ChatScreens.kt$val attachments by remember(peer.id, peer.pin) { trust.transfers.forPeer(peer) }.collectAsStateWithLifecycle(emptyList())</ID>
+    <ID>MaxLineLength:ChatScreens.kt$val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -&gt; picked = uri?.toString() }</ID>
+    <ID>MaxLineLength:ChatScreens.kt$val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it; denied = !it }</ID>
+    <ID>MaxLineLength:ChatScreens.kt$while (x &lt; size.width) { drawCircle(ink.copy(alpha = .12f),1.dp.toPx(),androidx.compose.ui.geometry.Offset(x,y)); x += pitch }</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$assertEquals("Hey from the hotspot", recipient.conversation(a.id).first { it.isNotEmpty() }.single().text)</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$assertTrue(sender.transfers.receive(interrupted, http, "https://127.0.0.1:$newPort", source.token))</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$chat(peerB, sender, flowOf(a)) { row, token -&gt; sender.transfers.receive(row, client, "https://127.0.0.1:$port", token) }</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$header(HttpHeaders.Range, "bytes=0-31"); header(HttpHeaders.Authorization, "Bearer ${source.token}")</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$recipient.transfers.stage(listOf(recipient.dao.find(a.id)!!), "Test photo.jpg", "image/jpeg") { bytes.inputStream() }</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$sender.transfers.forPeer(peerB).first { rows -&gt; rows.any { it.id == download.id &amp;&amp; it.offset &gt; 0 } }</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$val attempt = runCatching { withTimeout(10000) { wrongPin.webSocket(urlString = url) { error("reached endpoint") } } }</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$val failure = runCatching { withTimeout(10000) { client.webSocket(urlString = url) {} } }.exceptionOrNull()</ID>
+    <ID>MaxLineLength:ChatTransportTest.kt$ChatTransportTest$val replacement = chatServer(listOf("127.0.0.1"), 0, serverTls(bTls, trusted::get), recipient.transfers) {}</ID>
+    <ID>MaxLineLength:ChatUiTest.kt$ChatUiTest$arrayOf&lt;Any&gt;(id, UUID.randomUUID().toString(), "New incoming message", System.currentTimeMillis() + 60000)</ID>
+    <ID>MaxLineLength:ChatUiTest.kt$ChatUiTest$db.execSQL("INSERT INTO trusted_peers (id,name,colour,pin) VALUES (?, ?, 0, 'test-only')", arrayOf(id, placeholder))</ID>
+    <ID>MaxLineLength:ChatWire.kt$ChatFrame$val files: Boolean = false</ID>
+    <ID>MaxLineLength:ChatWire.kt$else</ID>
+    <ID>MaxLineLength:ChatWire.kt$if</ID>
+    <ID>MaxLineLength:ChatWire.kt$internal suspend</ID>
+    <ID>MaxLineLength:ChatWire.kt$require(UUID.fromString(event.id).toString() == event.id &amp;&amp; event.text.isNotBlank() &amp;&amp; event.text.length &lt;= 4096)</ID>
+    <ID>MaxLineLength:ChatWire.kt$trust.saveIncoming(peer, ChatMessage(peer.id, false, event.id, event.text, System.currentTimeMillis(), true))</ID>
+    <ID>MaxLineLength:ChatWire.kt$val row = trust.transfers.dao.get(peer.id, event.type != "file.decline" || event.key != "cancel-sent", event.id)</ID>
+    <ID>MaxLineLength:ChatWire.kt$val updates = launch { profile.distinctUntilChanged().collect { ws.write(ChatFrame("profile", text = it.name, colour = it.colour)) } }</ID>
+    <ID>MaxLineLength:ChatWire.kt$}</ID>
+    <ID>MaxLineLength:DeviceTls.kt$.</ID>
+    <ID>MaxLineLength:DeviceTls.kt$&lt;no name provided&gt;$override</ID>
+    <ID>MaxLineLength:DeviceTls.kt$&lt;no name provided&gt;$override fun chooseServerAlias(type: String?, issuers: Array&lt;out Principal&gt;?, socket: Socket?)</ID>
+    <ID>MaxLineLength:DeviceTls.kt$&lt;no name provided&gt;$override fun getClientAliases(type: String?, issuers: Array&lt;out Principal&gt;?)</ID>
+    <ID>MaxLineLength:DeviceTls.kt$&lt;no name provided&gt;$override fun getServerAliases(type: String?, issuers: Array&lt;out Principal&gt;?)</ID>
+    <ID>MaxLineLength:DeviceTls.kt$internal</ID>
+    <ID>MaxLineLength:DeviceTls.kt$val result = transportCredentials(id,pairing.private,store.getCertificate(IDENTITY_ALIAS) as X509Certificate,store,prefix,now)</ID>
+    <ID>MaxLineLength:DiagnosticRoute.kt$ProbeRoute</ID>
+    <ID>MaxLineLength:DiagnosticRoute.kt$if (send) control.needClientAuth = true else control.sslParameters = control.sslParameters.apply { endpointIdentificationAlgorithm = "HTTPS" }</ID>
+    <ID>MaxLineLength:DiagnosticRoute.kt$internal</ID>
+    <ID>MaxLineLength:DiagnosticRoute.kt$suspend</ID>
+    <ID>MaxLineLength:DiagnosticRoute.kt$try</ID>
+    <ID>MaxLineLength:DiagnosticRoute.kt$val control = sockets.own(tls.socketFactory.createSocket(wire,deviceHost(route.peer.id),wire.port,true) as SSLSocket)</ID>
+    <ID>MaxLineLength:DiagnosticRoute.kt$val route = routes.value.lastOrNull { it.peer.id == peer.id &amp;&amp; it.peer.pin == peer.pin } ?: error("Connect to the paired phone first")</ID>
+    <ID>MaxLineLength:LanApp.kt$LanApp$android.os.StrictMode.setThreadPolicy(android.os.StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())</ID>
+    <ID>MaxLineLength:LanApp.kt$LanApp$android.os.StrictMode.setVmPolicy(android.os.StrictMode.VmPolicy.Builder().detectLeakedClosableObjects().penaltyLog().build())</ID>
+    <ID>MaxLineLength:LanApp.kt$StorageModule$@Provides @Singleton</ID>
+    <ID>MaxLineLength:LanApp.kt$StorageModule$@Provides @Singleton fun trust(@ApplicationContext context: Context)</ID>
+    <ID>MaxLineLength:LanApp.kt$StorageModule$dev.lanchatshare.connectivity.LanChat(context, trust, profiles) { row, download -&gt; TransferWorker.queue(context, row, download) }</ID>
+    <ID>MaxLineLength:LanChat.kt$&lt;no name provided&gt;$override fun checkClientTrusted(chain: Array&lt;X509Certificate&gt;, auth: String)</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$(bound?.let { routedClient(it,credentials,true) } ?: chatClient(peer, credentials))</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$.</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$Inet6Address.getByAddress(null, ip.address, java.net.NetworkInterface.getByName(link.name)).hostAddress</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$attempts</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$authenticateOutgoing(local.id, peer, identityKeys(), token) { supportsFiles = it }</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$diagnosticRoute(trust.transfers,peer,credentials,address,bound?.local ?: requireNotNull(link).address,bound?.network ?: link?.network)</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$else</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$exchange(this, peer, client, "https://$host:$port", supportsFiles, selected, credentials)</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$if</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$if (wifi != null &amp;&amp; manager.boundNetworkForProcess == wifi) manager.bindProcessToNetwork(previousNetwork)</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$private suspend</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$seen[peer.id]?.takeIf { it.until &gt; SystemClock.elapsedRealtime() }?.let { routes.add(0, it.host to it.port) }</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$val</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$val address = bound?.remote ?: runCatching { InetAddress.getByName(java.net.URI(origin).host.removeSurrounding("[","]").replace("%25","%")) }.getOrNull()</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$val badPin = generateSequence&lt;Throwable&gt;(e) { it.cause }.any { it is CertificateException }</ID>
+    <ID>MaxLineLength:LanChat.kt$LanChat$val path = when { link == null -&gt; "Local LAN"; link.name.startsWith("p2p") -&gt; "Wi-Fi Direct"; link.network == null -&gt; "Downstream Wi-Fi / hotspot"; else -&gt; "Wi-Fi client (router or hotspot)" }</ID>
+    <ID>MaxLineLength:LanChat.kt$install(io.ktor.server.websocket.WebSockets) { maxFrameSize = 32768; pingPeriod = 10.seconds; timeout = 20.seconds }</ID>
+    <ID>MaxLineLength:LanChat.kt$internal</ID>
+    <ID>MaxLineLength:LanDiscovery.kt$LanDiscovery$internal</ID>
+    <ID>MaxLineLength:LanDiscovery.kt$LanDiscovery$setAttribute("id", profile.id)</ID>
+    <ID>MaxLineLength:LanDiscovery.kt$LanLink$internal data</ID>
+    <ID>MaxLineLength:LanDiscovery.kt$caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true &amp;&amp; caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)</ID>
+    <ID>MaxLineLength:LibraryFilter.kt$LibraryFilter$return SimpleSQLiteQuery("SELECT * FROM transfers WHERE " + clauses.joinToString(" AND ") + " ORDER BY $sort,rowid DESC", args.toTypedArray())</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$AlertDialog</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$Choice(names.entries.find { it.value == contact }?.key ?: "All contacts",listOf("All contacts") + names.keys) { contact = names[it].orEmpty() }</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$Column</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$LibraryFilter</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$OutlinedTextField(text,{ text = it },singleLine = true,label = { Text("Find a file") },modifier = Modifier.fillMaxWidth())</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$Row { TextButton(onClick = { launch(false) }) { Text("Open") }; TextButton(onClick = { launch(true) }) { Text("Share") } }</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$Text((if (row.outgoing) "Sent" else "Received") + " · " + Formatter.formatFileSize(context,row.size),style = MaterialTheme.typography.labelSmall)</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$Text((if (row.outgoing) "To " else "From ") + (peers.find { it.id == row.peer }?.name ?: "Forgotten phone"))</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$Text(row.name,maxLines = 2,overflow = TextOverflow.Ellipsis,style = MaterialTheme.typography.titleSmall)</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$catch (e: Exception) { if (e is CancellationException) throw e; issue = "Couldn’t remove the file." }</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$decoder.setTargetSampleSize(((maxOf(info.size.width,info.size.height)+511)/512).coerceAtLeast(1))</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$else</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$if</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$if (row.state in listOf("done","cancelled","declined","revoked")) TextButton(onClick = { deleting = true }) { Text("Delete local copy") }</ID>
+    <ID>MaxLineLength:LibraryScreen.kt$row.mime.startsWith("image/")</ID>
+    <ID>MaxLineLength:LibraryTest.kt$LibraryTest$val page = source.load(PagingSource.LoadParams.Refresh(null,16,false)) as PagingSource.LoadResult.Page&lt;Int, Transfer&gt;</ID>
+    <ID>MaxLineLength:LibraryTest.kt$LibraryTest$val source = store.transfers.dao.library(LibraryFilter(text = "% draft",kind = FileKind.Documents,peer = peers[0].id).query())</ID>
+    <ID>MaxLineLength:MainActivity.kt$MainActivity$Home(it, busy, failed, trustStore, chat, pendingShare, { pendingShare = null }, chatTarget, { chatTarget = null }, profileModel::save)</ID>
+    <ID>MaxLineLength:MainActivity.kt$MainActivity$chatTarget = if (savedInstanceState == null) intent.takeIf { it.action == "dev.lanchatshare.OPEN_CHAT" }?.data?.lastPathSegment else savedInstanceState.getString("chatTarget")</ID>
+    <ID>MaxLineLength:MainActivity.kt$MainActivity$else</ID>
+    <ID>MaxLineLength:MainActivity.kt$else</ID>
+    <ID>MaxLineLength:MainActivity.kt$if</ID>
+    <ID>MaxLineLength:MediaQuality.kt$&lt;no name provided&gt;$override</ID>
+    <ID>MaxLineLength:MediaQualityTest.kt$MediaQualityTest$store.transfers.all.first().forEach { store.transfers.file(it).delete(); store.transfers.previewFile(it).delete() }</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$.</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$catch (e: Exception) { if (isActive) mutable.update { it.copy(status = "Couldn’t reach this phone. Try again.") } }</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$class</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$else</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$identityKeys()</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$if (isActive) fail("Nearby couldn’t start. Check Bluetooth, permissions and BLE advertising support, then retry.")</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$mutable.update { it.copy(devices = it.devices.filterValues { device -&gt; SystemClock.elapsedRealtime() - device.seen &lt; 30000 }) }</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$mutable.update { it.copy(prompt = PairPrompt(match.name, match.id.takeLast(4).uppercase(), match.digits, match.changed)) }</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$mutable.update { it.copy(prompt = null, status = if (matches) "Waiting for the other phone…" else "Pairing cancelled.") }</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$synchronized(guard) { if (active === socket) { decision?.complete(false); runCatching { socket.close() } } }</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$try</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio$val permitUpgrade = mode != TurboMode.Off &amp;&amp; (if (initiator) upgrade else acceptingUpgrade.getAndSet(false) || mode == TurboMode.Auto)</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$NearbyRadio.&lt;no name provided&gt;$override fun onStartFailure(errorCode: Int)</ID>
+    <ID>MaxLineLength:NearbyRadio.kt$return byteArrayOf(1, port.toByte(), (suffix ushr 8).toByte(), suffix.toByte()) + name.toString().encodeToByteArray()</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$!locationReady -&gt; Button(onClick = { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Turn on location for scanning") }</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$!ready -&gt; Button(onClick = { try { enable.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)) } catch (_: SecurityException) { refresh++ } }) { Text("Turn on Bluetooth") }</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$Text</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$TextButton(enabled = !state.busy, onClick = { withWifi { radio?.connect(peer,true) } }) { Text("Try direct link") }</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, ("package:" + context.packageName).toUri())) }) { Text("App settings") }</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$askWifi.launch(if (Build.VERSION.SDK_INT &gt;= 33) arrayOf(wifiPermission) else arrayOf(ACCESS_COARSE_LOCATION,ACCESS_FINE_LOCATION))</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$if</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$text = { Text("Unsent messages will be removed. Delivered messages stay on this phone. Pair again to chat.") }</ID>
+    <ID>MaxLineLength:NearbyScreen.kt$val locationReady = Build.VERSION.SDK_INT &gt;= 31 || context.getSystemService(LocationManager::class.java).isLocationEnabled</ID>
+    <ID>MaxLineLength:NetworkChanges.kt$manager.registerNetworkCallback(NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),callback)</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$Column</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$LocalHotspot$}</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$LocalHotspot.&lt;no name provided&gt;$starting = false</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$Text("Some guest networks keep phones apart even when both show Wi-Fi. Open Nearby on both phones to try a direct link, or create a local hotspot below. Queued messages and accepted files resume when the phones reconnect.")</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$Text("Start a direct link from Nearby on two verified phones. Auto accepts a verified phone’s request while Nearby is open.")</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) }) { Text("Open phone network settings") }</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$else</ID>
+    <ID>MaxLineLength:NetworkSettings.kt$if (grants.isNotEmpty() &amp;&amp; grants.values.all { it }) LocalHotspot.start(context) else LocalHotspot.message = "Permission is needed to create a local Wi-Fi network."</ID>
+    <ID>MaxLineLength:OnboardingTest.kt$OnboardingTest$ui.waitUntil(10000) { ui.onAllNodes(hasText("Save changes") and !isEnabled()).fetchSemanticsNodes().isNotEmpty() }</ID>
+    <ID>MaxLineLength:Pairing.kt$Hello$internal</ID>
+    <ID>MaxLineLength:Pairing.kt$certificate?.let { encoder.encodeToString(digest(it)) }</ID>
+    <ID>MaxLineLength:Pairing.kt$require(confirm(Comparison(hello.name, hello.id, number.toString().padStart(6, '0'), saved != null &amp;&amp; saved != pin)))</ID>
+    <ID>MaxLineLength:Pairing.kt$return Verified(TrustedPeer(hello.id, hello.name, hello.colour, pin, hello.certificateSha256), token, hello.endpoints, upgrade)</ID>
+    <ID>MaxLineLength:Pairing.kt$val</ID>
+    <ID>MaxLineLength:PairingTest.kt$PairingTest$val again = exchange(atA.peer.pin, atB.peer.pin, approveA = { error("unexpected prompt") }, approveB = { error("unexpected prompt") })</ID>
+    <ID>MaxLineLength:PairingTest.kt$PairingTest${ if (initiator) pinA else pinB }</ID>
+    <ID>MaxLineLength:PowerTest.kt$PowerTest$.</ID>
+    <ID>MaxLineLength:PowerTest.kt$PowerTest$fun shell(cmd: String)</ID>
+    <ID>MaxLineLength:PowerTest.kt$PowerTest$shell("dumpsys deviceidle unforce")</ID>
+    <ID>MaxLineLength:PowerTest.kt$PowerTest$val row = Transfer(UUID.randomUUID().toString(),false,UUID.randomUUID().toString(),"sample","application/octet-stream",1,"","","","active",0,1)</ID>
+    <ID>MaxLineLength:PowerTest.kt$PowerTest$withContext(Dispatchers.IO) { androidx.work.WorkManager.getInstance(ctx).cancelUniqueWork(row.peer + "/" + row.id).result.get() }</ID>
+    <ID>MaxLineLength:RangeTimings.kt$RangeTimings$@Synchronized fun snapshot(): Map&lt;String, Long&gt;</ID>
+    <ID>MaxLineLength:RoutedClient.kt$&lt;no name provided&gt;$override fun createSocket(ip: InetAddress, port: Int)</ID>
+    <ID>MaxLineLength:RoutedClient.kt$&lt;no name provided&gt;$override fun createSocket(ip: InetAddress, port: Int, local: InetAddress, localPort: Int)</ID>
+    <ID>MaxLineLength:RoutedClient.kt$dns { host -&gt; if (host == deviceHost(path.peer.id)) listOf(path.remote) else throw UnknownHostException(host) }</ID>
+    <ID>MaxLineLength:Screens.kt$"About" -&gt; Column(Modifier.padding(24.dp)) { Wordmark(); Text("Local messaging and file sharing.") }</ID>
+    <ID>MaxLineLength:Screens.kt$"Share files" -&gt; ShareScreen(trusted, trust.transfers, incoming, consumed, peer?.id.takeIf { detail == "Conversation" })</ID>
+    <ID>MaxLineLength:Screens.kt$@Composable</ID>
+    <ID>MaxLineLength:Screens.kt$@Composable private</ID>
+    <ID>MaxLineLength:Screens.kt$Box</ID>
+    <ID>MaxLineLength:Screens.kt$Button</ID>
+    <ID>MaxLineLength:Screens.kt$CompositionLocalProvider</ID>
+    <ID>MaxLineLength:Screens.kt$Conversation(contact, trust, chat, { detail = "Chat appearance" }) { section = "Settings"; detail = "Network and hotspot" }</ID>
+    <ID>MaxLineLength:Screens.kt$ListItem(headlineContent = { Text("About") }, modifier = Modifier.clickable { detail = "About" })</ID>
+    <ID>MaxLineLength:Screens.kt$ListItem(headlineContent = { Text("Network and hotspot") }, modifier = Modifier.clickable { detail = "Network and hotspot" })</ID>
+    <ID>MaxLineLength:Screens.kt$Text(if (page == "Conversation" &amp;&amp; peer != null) peerLabel(peer, trusted) else page, Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.headlineSmall)</ID>
+    <ID>MaxLineLength:Screens.kt$TextButton(onClick = { detail = "Notifications" }) { Text("Notifications and reachability") }</ID>
+    <ID>MaxLineLength:Screens.kt$if (!wide) NavigationBar { Destinations { name, icon, label -&gt; NavigationBarItem(selected = section == name, onClick = { select(name) }, icon = icon, label = label) } }</ID>
+    <ID>MaxLineLength:Screens.kt$if (wide) NavigationRail { Destinations { name, icon, label -&gt; NavigationRailItem(selected = section == name, onClick = { select(name) }, icon = icon, label = label) } }</ID>
+    <ID>MaxLineLength:Screens.kt$keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)</ID>
+    <ID>MaxLineLength:Screens.kt$supportingText = { Text(if (invalid) "Enter a name with 1 to 24 characters." else "People nearby will see this name.") }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$"retrying" -&gt; "Reconnecting · resuming at " + android.text.format.Formatter.formatFileSize(context,row.offset)</ID>
+    <ID>MaxLineLength:ShareScreen.kt$(meter[row.meterKey()] ?: finished)?.let { Text(listOfNotNull(it.path,it.label(row.state=="done")).joinToString(" · "),style=MaterialTheme.typography.labelSmall) }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$@Composable internal</ID>
+    <ID>MaxLineLength:ShareScreen.kt$Button</ID>
+    <ID>MaxLineLength:ShareScreen.kt$FilledTonalButton(enabled = !sending, onClick = { photos.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo)) }) { Text("Photos &amp; videos") }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$Text((if (row.outgoing) "To " else "From ") + (peers.find { it.id == row.peer }?.let { peerLabel(it, peers) } ?: "Forgotten phone"))</ID>
+    <ID>MaxLineLength:ShareScreen.kt$Text(state + " · " + android.text.format.Formatter.formatFileSize(context, row.size), style = MaterialTheme.typography.labelMedium)</ID>
+    <ID>MaxLineLength:ShareScreen.kt$TextButton(enabled = !sending, onClick = { selected = ArrayList(selected - uriValue) }) { Text("Remove") }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$animationSpec = if (dev.lanchatshare.design.LocalAppMotion.current) androidx.compose.animation.core.spring() else androidx.compose.animation.core.snap()</ID>
+    <ID>MaxLineLength:ShareScreen.kt$context.contentResolver.query(uriValue.toUri(), arrayOf("_display_name"), null, null, null)</ID>
+    <ID>MaxLineLength:ShareScreen.kt$for (uri in selected.toList()) { files.add(targets, uri.toUri()); selected = ArrayList(selected - uri) }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$if (editingText || text.isNotEmpty()) item { OutlinedTextField(text, { text = it }, enabled = !sending, label = { Text("Shared text") }) }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$if (section.isNotEmpty()) item { Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleLarge) }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$requireNotNull(context.contentResolver.openOutputStream(dest)).use { out -&gt; files.file(row).inputStream().use { it.copyTo(out) } }</ID>
+    <ID>MaxLineLength:ShareScreen.kt$val</ID>
+    <ID>MaxLineLength:ShareScreen.kt$value = withContext(Dispatchers.IO) { android.graphics.BitmapFactory.decodeFile(files.previewFile(row).path) }</ID>
+    <ID>MaxLineLength:Theme.kt$&lt;no name provided&gt;$override fun onChange(selfChange: Boolean)</ID>
+    <ID>MaxLineLength:Theme.kt$context.contentResolver.registerContentObserver(android.provider.Settings.Global.getUriFor("animator_duration_scale"),false,observer)</ID>
+    <ID>MaxLineLength:Theme.kt$val</ID>
+    <ID>MaxLineLength:TlsBinding.kt$Credentials</ID>
+    <ID>MaxLineLength:TlsBinding.kt$builder.addExtension(Extension.basicConstraints, true, if (authority) BasicConstraints(0) else BasicConstraints(false))</ID>
+    <ID>MaxLineLength:TlsBinding.kt$builder.addExtension(Extension.keyUsage, true, KeyUsage(if (authority) KeyUsage.keyCertSign else KeyUsage.digitalSignature))</ID>
+    <ID>MaxLineLength:TlsBinding.kt$delegation.issuerX500Principal != identity.subjectX500Principal</ID>
+    <ID>MaxLineLength:TlsBinding.kt$if (cert.notAfter.time - cert.notBefore.time &gt; TLS_PERIOD + 2 * SKEW) throw CertificateException("Binding lifetime too long")</ID>
+    <ID>MaxLineLength:TlsBinding.kt$if (host != null) builder.addExtension(Extension.subjectAlternativeName, false, GeneralNames(GeneralName(GeneralName.dNSName, host)))</ID>
+    <ID>MaxLineLength:TlsBindingTest.kt$TlsBindingTest$altered[index] = CertificateFactory.getInstance("X.509").generateCertificate(der.inputStream()) as X509Certificate</ID>
+    <ID>MaxLineLength:TlsBindingTest.kt$TlsBindingTest$for</ID>
+    <ID>MaxLineLength:TlsBindingTest.kt$TlsBindingTest.Companion$private val root = certificate(name, name, identity.public, identity.private, now - 86400000, now + 10 * TLS_PERIOD, null, true)</ID>
+    <ID>MaxLineLength:Transfer.kt$TransferDao$@Query("SELECT * FROM transfers WHERE peer=:peer AND outgoing=:outgoing AND id=:id") suspend fun get(peer: String, outgoing: Boolean, id: String): Transfer?</ID>
+    <ID>MaxLineLength:Transfer.kt$TransferDao$@Query("SELECT * FROM transfers WHERE peer=:peer AND pin=:pin ORDER BY time") fun observe(peer: String, pin: String): Flow&lt;List&lt;Transfer&gt;&gt;</ID>
+    <ID>MaxLineLength:Transfer.kt$TransferDao$@Query("SELECT COALESCE(SUM(bytes),0) FROM (SELECT MAX(size) AS bytes FROM transfers WHERE (outgoing=1 OR state='done') AND state!='removed' GROUP BY outgoing,id,CASE WHEN outgoing=1 THEN '' ELSE peer END)")</ID>
+    <ID>MaxLineLength:Transfer.kt$TransferDao$@Query("SELECT t.* FROM transfers t JOIN trusted_peers p ON p.id=t.peer AND p.pin=t.pin WHERE t.outgoing=1 AND t.state='active' AND t.id=:id AND t.token=:token")</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$"active" -&gt; row.state in listOf("paused", "failed", "storage", "invalid") || (!row.outgoing &amp;&amp; row.state == "offered")</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$frame.hash.matches(Regex("[0-9a-f]{64}"))</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$fun</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$fun file(row: Transfer): File</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$if</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$internal suspend</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$stage(peers,name.substringBeforeLast('.') + extension,if (image) "image/jpeg" else "video/mp4",thumbnail) { temp.inputStream() }</ID>
+    <ID>MaxLineLength:Transfer.kt$Transfers$suspend fun addText(peers: List&lt;TrustedPeer&gt;, text: String)</ID>
+    <ID>MaxLineLength:TransferDecision.kt$.</ID>
+    <ID>MaxLineLength:TransferDecision.kt$TransferDecision$if (row != null &amp;&amp; (decision != "active" || row.state == "offered")) trust.transfers.action(row, decision)</ID>
+    <ID>MaxLineLength:TransferDecision.kt$if</ID>
+    <ID>MaxLineLength:TransferDecision.kt$manager.createNotificationChannel(NotificationChannel(channel, "Incoming files", NotificationManager.IMPORTANCE_HIGH))</ID>
+    <ID>MaxLineLength:TransferDecision.kt$return</ID>
+    <ID>MaxLineLength:TransferDecision.kt$val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)</ID>
+    <ID>MaxLineLength:TransferDecision.kt$}</ID>
+    <ID>MaxLineLength:TransferMeter.kt$RadioReading(it?.frequency?.takeIf { f -&gt; f &gt; 0 },it?.linkSpeed?.takeIf { speed -&gt; speed &gt; 0 },it?.rssi?.takeIf { signal -&gt; signal in -126..0 })</ID>
+    <ID>MaxLineLength:TransferMeter.kt$Rate$internal data</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$(if (screen) it.optLong("screenOnMs") else it.optLong("screenOffMs")) &gt;= it.optLong("elapsedMs") * 0.9</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$.</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$it.optString("path") == "Wi-Fi client (router or hotspot)"</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$listOf("peerId","direction","path","testSetup").all { row.optString(it) == probe.optString(it) }</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$prefs(c).edit().putString("ceiling/" + java.util.UUID.randomUUID(), record.put("benchmark",true).toString()).apply()</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$rates.update { current -&gt; current.entries.filter { it.key !in live }.takeLast(32).associate { it.toPair() } + current.filterKeys { it in live } }</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$val</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$val rate=Rate(speed,avg,if(speed&gt;0) kotlin.math.ceil((row.size-row.offset)/1e6/speed).toLong() else null,chat.paths.value[row.peer])</ID>
+    <ID>MaxLineLength:TransferMeter.kt$TransferMeter$val s = samples[key] ?: if (row.state=="done") continue else Sample(now,row.offset,Process.getElapsedCpuTime(),pm.isInteractive).also { samples[key]=it }</ID>
+    <ID>MaxLineLength:TransferMeter.kt$internal</ID>
+    <ID>MaxLineLength:TransferPower.kt$if (Build.VERSION.SDK_INT &gt;= 34) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else WifiManager.WIFI_MODE_FULL_HIGH_PERF</ID>
+    <ID>MaxLineLength:TransferPower.kt$try { wifi.acquire() } catch (e: SecurityException) { android.util.Log.w("LanChatShare","Wi-Fi lock unavailable",e) }</ID>
+    <ID>MaxLineLength:TransferPower.kt$val cpu = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"LanChatShare:transfer")</ID>
+    <ID>MaxLineLength:TransferProgress.kt$.</ID>
+    <ID>MaxLineLength:TransferProgress.kt$val</ID>
+    <ID>MaxLineLength:TransferWire.kt$(0 until streams).map { begin + it * window.toLong() }.takeWhile { it &lt; row.size }</ID>
+    <ID>MaxLineLength:TransferWire.kt$android.util.Log.i("LanChatShare","Range interrupted at $start of ${row.size}: " + e.javaClass.simpleName)</ID>
+    <ID>MaxLineLength:TransferWire.kt$call</ID>
+    <ID>MaxLineLength:TransferWire.kt$check</ID>
+    <ID>MaxLineLength:TransferWire.kt$key = if (row.state == "cancelled") (if (row.outgoing) "cancel-sent" else "cancel-received") else ""</ID>
+    <ID>MaxLineLength:TransferWire.kt$private suspend</ID>
+    <ID>MaxLineLength:TransferWire.kt$response.headers[HttpHeaders.ContentLength]?.toLongOrNull() == if (checked) encodedSize(length) else length</ID>
+    <ID>MaxLineLength:TransferWire.kt$suspend fun active()</ID>
+    <ID>MaxLineLength:TransferWire.kt$val checked = response.headers[HttpHeaders.ContentType]?.substringBefore(';') == RANGE_FORMAT</ID>
+    <ID>MaxLineLength:TransferWire.kt$val row = if (auth.startsWith("Bearer ")) files.dao.granted(call.parameters["id"].orEmpty(), auth.removePrefix("Bearer ")) else null</ID>
+    <ID>MaxLineLength:TransferWire.kt$writeBlocks(source,sink,length,files.timings(row)) { files.dao.granted(row.id,auth.removePrefix("Bearer ")) != null }</ID>
+    <ID>MaxLineLength:Trust.kt$PeerDao$@Query("UPDATE trusted_peers SET name = :name, colour = :colour WHERE id = :id AND pin = :pin AND (name != :name OR colour != :colour)")</ID>
+    <ID>MaxLineLength:Trust.kt$TrustDatabase$@Database(entities = [TrustedPeer::class, ChatMessage::class, Transfer::class], version = 6, autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4), AutoMigration(from = 4, to = 5), AutoMigration(from = 5, to = 6)])</ID>
+    <ID>MaxLineLength:Trust.kt$TrustStore$@Synchronized internal</ID>
+    <ID>MaxLineLength:Trust.kt$TrustStore$Ticket</ID>
+    <ID>MaxLineLength:Trust.kt$TrustStore$messages.insert(ChatMessage(peer, true, java.util.UUID.randomUUID().toString(), text.trim(), System.currentTimeMillis(), false))</ID>
+    <ID>MaxLineLength:Trust.kt$TrustStore$private val database = Room.databaseBuilder(context.applicationContext, TrustDatabase::class.java, databaseName).build()</ID>
+    <ID>MaxLineLength:Trust.kt$TrustStore$typingTimes.value = if (active) typingTimes.value + (peer to SystemClock.elapsedRealtime()) else typingTimes.value - peer</ID>
+    <ID>MaxLineLength:TurboLink.kt$RadioOffer</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$.</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$catch (e: Exception) { currentCoroutineContext().ensureActive(); withTimeout(12000) { localHotspot(context) } }</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$fun mode(context: Context)</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$if</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$if (address != null) return HostRadio(RadioOffer("Wi-Fi Direct",ssid,secret,requireNotNull(address.hostAddress),frequency = group.frequency.takeIf { it &gt; 0 }),release)</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$if (ip != null) return HostRadio(RadioOffer("Local hotspot",requireNotNull(config.ssid),requireNotNull(config.passphrase),requireNotNull(ip.hostAddress)),Closeable { reservation.close() })</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$internal suspend</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$return InetAddress.getByAddress(bytes).also { require(!it.isLoopbackAddress &amp;&amp; !it.isAnyLocalAddress &amp;&amp; !it.isMulticastAddress) }</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$return RadioReading(info?.frequency?.takeIf { it &gt; 0 } ?: path.frequency, info?.linkSpeed?.takeIf { it &gt; 0 },info?.rssi?.takeIf { it in -126..0 })</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$val address = NetworkInterface.getByName(group.getInterface())?.inetAddresses?.toList()?.filterIsInstance&lt;Inet4Address&gt;()?.singleOrNull()</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$val group = suspendCancellableCoroutine&lt;WifiP2pGroup?&gt; { cont -&gt; manager.requestGroupInfo(p2p) { if (cont.isActive) cont.resume(it) } }</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$val info = path.network?.let { context.getSystemService(ConnectivityManager::class.java).getNetworkCapabilities(it)?.transportInfo } as? android.net.wifi.WifiInfo</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$val ip = lanLinks(c).filter { it.network == null &amp;&amp; it.address is Inet4Address &amp;&amp; it.address !in before }.singleOrNull()?.address</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink$val link = lanLinks(context).first { it.network == network &amp;&amp; it.address is Inet4Address &amp;&amp; it.contains(remote) }</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink.&lt;no name provided&gt;$override fun onFailed(reason: Int)</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink.&lt;no name provided&gt;$override fun onFailure(reason: Int)</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink.&lt;no name provided&gt;$override fun onStarted(value: WifiManager.LocalOnlyHotspotReservation)</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboLink.&lt;no name provided&gt;$override fun onUnavailable()</ID>
+    <ID>MaxLineLength:TurboLink.kt$TurboRoute</ID>
+    <ID>MaxLineLength:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$"STALL size=$size offset=$offset ms=" + (SystemClock.elapsedRealtime()-start) + " state=" + current.state</ID>
+    <ID>MaxLineLength:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$check</ID>
+    <ID>MaxLineLength:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$if (current.offset != offset) { changed=SystemClock.elapsedRealtime(); offset=current.offset }</ID>
+    <ID>MaxLineLength:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$val</ID>
+    <ID>MaxLineLength:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$while (!store.transfers.receive(row,http,origin,token,window,streams,timings)) { Log.i("LcsBench","RETRY ${row.id}"); delay(1000) }</ID>
+    <ID>MaxLineLength:TwoDeviceBenchmark.kt$TwoDeviceBenchmark$withTimeout(20000) { store.conversation(peer.id).first { list -&gt; list.any { it.text==text &amp;&amp; it.delivered } } }</ID>
+    <ID>MaxLineLength:WindowedRanges.kt$internal suspend</ID>
+    <ID>MaxLineLength:WindowedRangesTest.kt$WindowedRangesTest$assertTrue(runCatching { ByteReadChannel(encoded).readBlock(first,first.size,true) {} }.exceptionOrNull() is ChunkMismatch)</ID>
+    <ID>MaxLineLength:WindowedRangesTest.kt$WindowedRangesTest$assertTrue(runCatching { ByteReadChannel(encoded.copyOf(120)).readBlock(first,first.size,true) {} }.exceptionOrNull() is IOException)</ID>
+    <ID>MayBeConst:TlsBindingTest.kt$TlsBindingTest.Companion$private val now = 1770000000000L</ID>
+    <ID>NestedBlockDepth:BackgroundTest.kt$BackgroundTest$@Test fun backgroundTextPostsAndReadActionClearsIt()</ID>
+    <ID>NestedBlockDepth:DiagnosticRoute.kt$internal fun ceilingPair(route: ProbeRoute, send: Boolean, mb: Int, sockets: ProbeSockets, controlPort: Int = PORT, listening: (Int) -&gt; Unit = {}, started: () -&gt; Unit = {}, measured: (CeilingRate) -&gt; Unit)</ID>
+    <ID>NestedBlockDepth:LanDiscovery.kt$LanDiscovery$private suspend fun broadcastLoop()</ID>
+    <ID>NestedBlockDepth:TransferMeter.kt$TransferMeter$fun report(c: Context): String</ID>
+    <ID>NestedBlockDepth:TurboLink.kt$TurboLink$@SuppressLint("MissingPermission") private suspend fun directGroup(c: Context): HostRadio</ID>
+    <ID>ReturnCount:Alerts.kt$MessageAction$override fun onReceive(context: Context, intent: Intent)</ID>
+    <ID>ReturnCount:LanDiscovery.kt$LanLink$fun contains(other: InetAddress): Boolean</ID>
+    <ID>ReturnCount:NearbyRadio.kt$NearbyRadio.&lt;no name provided&gt;$override fun onScanResult(callbackType: Int, result: ScanResult)</ID>
+    <ID>ReturnCount:ProfileRepository.kt$fun validatedName(input: String): String?</ID>
+    <ID>ReturnCount:Transfer.kt$Transfers.&lt;no name provided&gt;$override fun read(bytes: ByteArray, offset: Int, length: Int): Int</ID>
+    <ID>ReturnCount:Trust.kt$TrustStore$@Synchronized fun consume(id: String, presented: ByteArray): Boolean</ID>
+    <ID>ReturnCount:Trust.kt$TrustStore$@Synchronized internal fun takeOutgoing(id: String): Pair&lt;ByteArray, List&lt;WifiEndpoint&gt;&gt;?</ID>
+    <ID>SwallowedException:CeilingControls.kt$e: TimeoutCancellationException</ID>
+    <ID>SwallowedException:NearbyRadio.kt$NearbyRadio$e: Exception</ID>
+    <ID>SwallowedException:TransferWire.kt$e: ChunkMismatch</ID>
+    <ID>SwallowedException:TransferWire.kt$e: kotlinx.coroutines.channels.ClosedReceiveChannelException</ID>
+    <ID>SwallowedException:TurboLink.kt$TurboLink$e: Exception</ID>
+    <ID>ThrowsCount:TlsBinding.kt$internal fun verifyBinding(chain: Array&lt;X509Certificate&gt;, trusted: Map&lt;String, String&gt;, now: Date = Date()): String</ID>
+    <ID>TooGenericExceptionCaught:CeilingControls.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ChatService.kt$ChatService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LanChat.kt$LanChat$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LibraryScreen.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:NearbyRadio.kt$NearbyRadio$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Transfer.kt$Transfers$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TurboLink.kt$TurboLink$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TurboLink.kt$TurboLink$t: Throwable</ID>
+    <ID>TooManyFunctions:Transfer.kt$TransferDao</ID>
+    <ID>TooManyFunctions:Transfer.kt$Transfers</ID>
+    <ID>TooManyFunctions:Trust.kt$TrustStore</ID>
+    <ID>TooManyFunctions:TurboLink.kt$TurboLink</ID>
+    <ID>WildcardImport:Alerts.kt$import android.app.*</ID>
+    <ID>WildcardImport:Alerts.kt$import android.content.*</ID>
+    <ID>WildcardImport:Alerts.kt$import android.graphics.*</ID>
+    <ID>WildcardImport:Alerts.kt$import androidx.datastore.preferences.core.*</ID>
+    <ID>WildcardImport:Alerts.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:Alerts.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:Alerts.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:AndroidIdentityTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:Appearance.kt$import androidx.datastore.preferences.core.*</ID>
+    <ID>WildcardImport:AppearanceLibraryTest.kt$import androidx.compose.ui.test.*</ID>
+    <ID>WildcardImport:AppearanceScreen.kt$import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:AppearanceScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:AppearanceScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:AppearanceScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:AppearanceScreen.kt$import dev.lanchatshare.design.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import android.app.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import android.content.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import android.os.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import androidx.datastore.preferences.core.*</ID>
+    <ID>WildcardImport:BackgroundSettings.kt$import androidx.lifecycle.compose.*</ID>
+    <ID>WildcardImport:BackgroundTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:BackgroundTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:BenchmarkReportTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:BenchmarkScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:BenchmarkScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:BenchmarkScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:BenchmarkScreen.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:BenchmarkScreen.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:CeilingControls.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:CeilingControls.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:CeilingControls.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:CeilingControls.kt$import androidx.compose.ui.semantics.*</ID>
+    <ID>WildcardImport:CeilingControls.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:CeilingControls.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:CeilingTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:CeilingTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ChatMessage.kt$import androidx.room.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.compose.foundation.lazy.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.compose.ui.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.compose.ui.semantics.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import androidx.lifecycle.compose.*</ID>
+    <ID>WildcardImport:ChatScreens.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:ChatService.kt$import android.app.*</ID>
+    <ID>WildcardImport:ChatService.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:ChatTransportTest.kt$import io.ktor.client.plugins.websocket.*</ID>
+    <ID>WildcardImport:ChatTransportTest.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:ChatTransportTest.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:ChatTransportTest.kt$import io.ktor.websocket.*</ID>
+    <ID>WildcardImport:ChatTransportTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:ChatTransportTest.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:ChatTransportTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ChatUiTest.kt$import androidx.compose.ui.test.*</ID>
+    <ID>WildcardImport:ChatWire.kt$import io.ktor.websocket.*</ID>
+    <ID>WildcardImport:ChatWire.kt$import java.security.*</ID>
+    <ID>WildcardImport:ChatWire.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:ChatWire.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:DeviceTls.kt$import java.security.*</ID>
+    <ID>WildcardImport:DeviceTls.kt$import javax.net.ssl.*</ID>
+    <ID>WildcardImport:DiagnosticRoute.kt$import java.io.*</ID>
+    <ID>WildcardImport:DiagnosticRoute.kt$import java.net.*</ID>
+    <ID>WildcardImport:DiagnosticRoute.kt$import javax.net.ssl.*</ID>
+    <ID>WildcardImport:DiagnosticRoute.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:LanChat.kt$import io.ktor.client.engine.cio.*</ID>
+    <ID>WildcardImport:LanChat.kt$import io.ktor.client.plugins.websocket.*</ID>
+    <ID>WildcardImport:LanChat.kt$import io.ktor.server.application.*</ID>
+    <ID>WildcardImport:LanChat.kt$import io.ktor.server.engine.*</ID>
+    <ID>WildcardImport:LanChat.kt$import io.ktor.server.routing.*</ID>
+    <ID>WildcardImport:LanChat.kt$import io.ktor.server.websocket.*</ID>
+    <ID>WildcardImport:LanChat.kt$import javax.net.ssl.*</ID>
+    <ID>WildcardImport:LanChat.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:LanChat.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:LanDiscovery.kt$import android.net.*</ID>
+    <ID>WildcardImport:LanDiscovery.kt$import android.net.nsd.*</ID>
+    <ID>WildcardImport:LanDiscovery.kt$import java.net.*</ID>
+    <ID>WildcardImport:LanDiscovery.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import androidx.compose.foundation.lazy.grid.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import androidx.paging.compose.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:LibraryScreen.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:LibraryTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:MainActivity.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:MediaQuality.kt$import androidx.datastore.preferences.core.*</ID>
+    <ID>WildcardImport:MediaQuality.kt$import androidx.media3.transformer.*</ID>
+    <ID>WildcardImport:MediaQuality.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:MediaQuality.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:MediaQualityTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:NearbyRadio.kt$import android.bluetooth.*</ID>
+    <ID>WildcardImport:NearbyRadio.kt$import android.bluetooth.le.*</ID>
+    <ID>WildcardImport:NearbyRadio.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:NearbyRadio.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:NearbyScreen.kt$import android.Manifest.permission.*</ID>
+    <ID>WildcardImport:NearbyScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:NearbyScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:NearbyScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:NearbyScreen.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:NetworkChanges.kt$import android.net.*</ID>
+    <ID>WildcardImport:NetworkSettings.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:NetworkSettings.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:NetworkSettings.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:OnboardingTest.kt$import androidx.compose.ui.test.*</ID>
+    <ID>WildcardImport:Pairing.kt$import java.io.*</ID>
+    <ID>WildcardImport:Pairing.kt$import java.security.*</ID>
+    <ID>WildcardImport:PairingTest.kt$import java.io.*</ID>
+    <ID>WildcardImport:PairingTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:PairingTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:PowerTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:PowerTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ProfileModel.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:ProfileRepository.kt$import androidx.datastore.preferences.core.*</ID>
+    <ID>WildcardImport:ProfileRepositoryTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:ProfileRepositoryTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:RecoveryTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:RoutedClient.kt$import java.net.*</ID>
+    <ID>WildcardImport:Screens.kt$import androidx.compose.animation.*</ID>
+    <ID>WildcardImport:Screens.kt$import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:Screens.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Screens.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Screens.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Screens.kt$import androidx.compose.ui.semantics.*</ID>
+    <ID>WildcardImport:Screens.kt$import dev.lanchatshare.data.*</ID>
+    <ID>WildcardImport:ShareScreen.kt$import androidx.activity.result.contract.ActivityResultContracts.*</ID>
+    <ID>WildcardImport:ShareScreen.kt$import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:ShareScreen.kt$import androidx.compose.foundation.lazy.*</ID>
+    <ID>WildcardImport:ShareScreen.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:ShareScreen.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:ShareScreen.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:ShareScreen.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:Theme.kt$import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Theme.kt$import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Theme.kt$import androidx.compose.ui.text.font.*</ID>
+    <ID>WildcardImport:TlsBinding.kt$import java.security.*</ID>
+    <ID>WildcardImport:TlsBinding.kt$import org.bouncycastle.asn1.x509.*</ID>
+    <ID>WildcardImport:TlsBindingTest.kt$import java.security.cert.*</ID>
+    <ID>WildcardImport:TlsBindingTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:Transfer.kt$import androidx.room.*</ID>
+    <ID>WildcardImport:Transfer.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TransferDecision.kt$import android.app.*</ID>
+    <ID>WildcardImport:TransferDecision.kt$import android.content.*</ID>
+    <ID>WildcardImport:TransferDecision.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TransferDecision.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:TransferMeter.kt$import dev.lanchatshare.connectivity.*</ID>
+    <ID>WildcardImport:TransferMeter.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TransferMeter.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:TransferPower.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TransferPower.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:TransferProgress.kt$import android.app.*</ID>
+    <ID>WildcardImport:TransferProgress.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:TransferWire.kt$import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:TransferWire.kt$import io.ktor.client.statement.*</ID>
+    <ID>WildcardImport:TransferWire.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:TransferWire.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:TransferWire.kt$import io.ktor.server.routing.*</ID>
+    <ID>WildcardImport:TransferWire.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TransferWire.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:TransferWorker.kt$import androidx.work.*</ID>
+    <ID>WildcardImport:TransferWorker.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:Trust.kt$import androidx.room.*</ID>
+    <ID>WildcardImport:Trust.kt$import java.security.*</ID>
+    <ID>WildcardImport:TurboLink.kt$import android.net.*</ID>
+    <ID>WildcardImport:TurboLink.kt$import android.net.wifi.p2p.*</ID>
+    <ID>WildcardImport:TurboLink.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TurboLink.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:TwoDeviceBenchmark.kt$import io.ktor.client.plugins.websocket.*</ID>
+    <ID>WildcardImport:TwoDeviceBenchmark.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TwoDeviceBenchmark.kt$import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:UpgradeChannelTest.kt$import org.junit.Assert.*</ID>
+    <ID>WildcardImport:WindowedRanges.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:WindowedRangesTest.kt$import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:WindowedRangesTest.kt$import org.junit.Assert.*</ID>
+  </CurrentIssues>
+</SmellBaseline>
