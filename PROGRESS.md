@@ -2,7 +2,7 @@
 
 ## Current verification
 
-Publication uses Git Credential Manager, a public MIT repository, CI and tagged debug APK prereleases. Prepared the community files, quality checks and the selected logo exports. Next: verify the clean checkout and final secret scan, show the publication inventory, publish main and attach the existing debug APK to v0.1.0. Pages and branch protection are off.
+Publication uses Git Credential Manager, a public MIT repository, CI and tagged debug APK prereleases. Community files, quality checks and the selected logo exports are ready. A clean clone built the debug APK and passed all 19 JVM tests and Android lint. The public repository is rudraprajapati0210/LanChatShare. The v0.1.0 distribution uses the existing debug APK (Android version 0.3.0). The next engineering checkpoint is the physical router and hotspot benchmark below. Pages and branch protection are off.
 
 Phase 1 baseline collected. A 100 MB transfer on two API 37 emulators reached 0.434 MB/s versus 2.103 MB/s for memory TCP and 1.853 MB/s for memory TLS. Range-header wait consumed 126.502 of 230.455 s. No retries. **Next step:** run the same Diagnostics comparison on the two physical phones, first on the router and then a hotspot, and export both phones' reports. Evaluate larger streaming windows in Phase 2 against those baselines while checking chat latency and durable resume. [Results](docs/BENCHMARKS.md)
 
