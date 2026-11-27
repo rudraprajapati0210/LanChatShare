@@ -1,5 +1,17 @@
 # Transfer benchmarks
 
+## Phase 1 baseline on virtual Wi-Fi
+
+One run on two API 37 emulators, 100,000,000 bytes in the same direction. The receiver measured the two memory streams first, then accepted and verified the regular file using the shipping 256 KiB range configuration. The file test included concurrent chat probes. The emulator radio and shared host resources cannot establish a physical Wi-Fi ceiling.
+
+| Receiver measurement | Seconds | MB/s | Mbit/s | Relative to TCP |
+|---|---:|---:|---:|---:|
+| Memory TCP | 47.556 | 2.103 | 16.82 | 100% |
+| Memory pinned TLS | 53.973 | 1.853 | 14.82 | 88.1% |
+| File with final SHA-256 verification | 230.455 | 0.434 | 3.47 | 20.6% |
+
+Waiting for range response headers took 126.502 s (55% of elapsed time). Body reads took 71.627 s, disk writes 0.562 s, disk sync 6.094 s, Room progress writes 5.913 s and final SHA-256 verification 0.879 s. The file completed without a retry and chat receipt p95 was 692 ms. This identifies the largest observed wait. Header wait includes remote request handling and scheduling, so it does not establish radio RTT. The user's physical result of about 0.73 MB/s on a file over 4 GB lacks a paired ceiling sample. Repeat on the router and hotspot before choosing an optimization.
+
 ## Reading a Phase 1 export
 
 Use the receiving phone's file average and its matching TCP and TLS memory runs. The report adds `percentOfTCP` and `percentOfTLS` when it finds an earlier sample within two hours with the same peer, direction, byte count, path, setup label and reported frequency. The file must start at offset zero and spend at least 95% of its measured interval in the matching screen state. Ceiling records record the screen at the beginning and end of each stream. Keep it in that state throughout the run. Unknown frequency can match another unknown frequency, so record the hotspot or router band manually if available.
