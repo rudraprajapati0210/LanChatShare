@@ -2,6 +2,8 @@
 
 ## Current verification
 
+Publication uses Git Credential Manager, a public MIT repository, CI and tagged debug APK prereleases. Prepared the community files, quality checks and the selected logo exports. Next: verify the clean checkout and final secret scan, show the publication inventory, publish main and attach the existing debug APK to v0.1.0. Pages and branch protection are off.
+
 Phase 1 baseline collected. A 100 MB transfer on two API 37 emulators reached 0.434 MB/s versus 2.103 MB/s for memory TCP and 1.853 MB/s for memory TLS. Range-header wait consumed 126.502 of 230.455 s. No retries. **Next step:** run the same Diagnostics comparison on the two physical phones, first on the router and then a hotspot, and export both phones' reports. Evaluate larger streaming windows in Phase 2 against those baselines while checking chat latency and durable resume. [Results](docs/BENCHMARKS.md)
 
 Phase 1 instrumentation is implemented. Diagnostics exports file-stage counters and both speed units, and the debug build can compare the active paired route with memory-only TCP and pinned TLS. The debug build, release Kotlin compile, 19 JVM tests, Android lint (zero errors) and all 17 substantive Android regression tests passed. The background-notification tests require notification permission on the test installation. Next: collect the 100 MB two-emulator comparison, then run the same test on the physical router and hotspot before tuning.
