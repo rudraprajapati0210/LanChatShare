@@ -101,7 +101,7 @@ Pairing requests Bluetooth permissions at point of use. Android 11 requires loca
 
 For host testing in milestone C, turn mobile data off, turn on the phone hotspot, join from two clients, and open the app on all three phones. Verify host-to-client and client-to-host communication, then disconnect and rejoin one client. Manufacturer-specific discovery, numeric verification, and isolation behaviour need physical testing.
 
-See [architecture and physical test scenarios](ARCHITECTURE.md), [design specification](DESIGN.md), and the [bundled font licence](core/design/OFL.txt).
+See [architecture and physical test scenarios](ARCHITECTURE.md), [design specification](../DESIGN.md), and the [bundled font licence](../core/design/OFL.txt).
 
 
 If Windows reports “Could not find or load main class” followed by part of a PATH entry when launching Gradle Test Executor, check PATH for stray quotation marks. In PowerShell, run `$env:Path = $env:Path.Replace('"', '')` for the current shell, then rerun the test command with `--no-daemon`.
